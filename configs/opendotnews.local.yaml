@@ -1,0 +1,40 @@
+# Local development configuration for opendotnews
+# WARNING: Do NOT use loopback HTTP, allow_insecure_http, or allow_private_destinations in production.
+
+listen: "127.0.0.1:8080"
+public_url: "http://127.0.0.1:8080"
+data_dir: "./data"
+
+auth:
+  mode: local
+  admin_token: "replace-me-local-admin-token"
+
+nats:
+  mode: embedded
+  host: "127.0.0.1"
+  port: -1
+  store_dir: "./data/jetstream"
+  stream_name: "OPENDOTNEWS_EVENTS"
+
+retention:
+  max_age: 168h
+  max_payload_bytes: 65536
+  max_storage_bytes: 1073741824
+  duplicates_window: 2m
+
+webhooks:
+  timeout: 10s
+  max_attempts: 12
+  max_retry_age: 24h
+  initial_backoff: 1s
+  max_backoff: 5m
+  ack_wait: 30s
+  max_in_flight_per_subscription: 1
+  max_global_in_flight: 64
+  # Localhost demo only:
+  allow_insecure_http: true
+  allow_private_destinations: true
+
+limits:
+  max_subscriptions_per_account: 100
+  max_http_body_bytes: 131072

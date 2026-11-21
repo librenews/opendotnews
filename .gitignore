@@ -1,0 +1,18 @@
+# Binaries & build output
+/bin/
+/opendotnews
+*.exe
+*.test
+*.out
+coverage.txt
+
+# Local runtime data
+/data/
+*.db
+*.db-wal
+*.db-shm
+
+# OS / editor artifacts
+.DS_Store
+.idea/
+.vscode/

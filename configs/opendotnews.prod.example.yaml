@@ -1,0 +1,38 @@
+# Production-oriented configuration template for opendotnews
+# Terminate TLS at your reverse proxy / load balancer and keep NATS on a private network.
+
+listen: "0.0.0.0:8080"
+public_url: "https://events.example.com"
+data_dir: "/var/lib/opendotnews"
+
+auth:
+  mode: local
+  # Supply admin_token via secret management; Phase B adds OAuth 2.1 mode.
+  admin_token: ""
+
+nats:
+  mode: external
+  url: "nats://nats.internal:4222"
+  stream_name: "OPENDOTNEWS_EVENTS"
+
+retention:
+  max_age: 168h
+  max_payload_bytes: 65536
+  max_storage_bytes: 10737418240
+  duplicates_window: 2m
+
+webhooks:
+  timeout: 10s
+  max_attempts: 12
+  max_retry_age: 24h
+  initial_backoff: 2s
+  max_backoff: 5m
+  ack_wait: 30s
+  max_in_flight_per_subscription: 1
+  max_global_in_flight: 128
+  allow_insecure_http: false
+  allow_private_destinations: false
+
+limits:
+  max_subscriptions_per_account: 100
+  max_http_body_bytes: 131072
