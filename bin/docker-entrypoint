@@ -1,6 +1,9 @@
 #!/bin/bash -e
 
-# If running the rails server then create or migrate existing database
+# Honor PORT from container PaaS platforms (Railway, Render, Fly.io) while defaulting to 80 for Kamal Proxy.
+export HTTP_PORT="${HTTP_PORT:-${PORT:-80}}"
+
+# Only the web container runs database migrations on boot so Sidekiq workers never race migrations.
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
 fi

@@ -1,0 +1,98 @@
+# Kamal 2 reference deployment configuration for Open.News
+# Target: single Ubuntu VPS running separate containers for web, worker, postgres, and redis
+# behind Kamal Proxy (automatic HTTPS via Let's Encrypt).
+#
+# Required local env vars before running `kamal setup` or `kamal deploy`:
+#   KAMAL_HOST   — Ubuntu VPS IP or SSH hostname (e.g. 203.0.113.10)
+#   APP_HOST     — Public domain (e.g. open.news)
+#   Secrets in .kamal/secrets (copy from .kamal/secrets.example)
+
+service: opendotnews
+
+image: librenews/opendotnews
+
+servers:
+  web:
+    hosts:
+      - <%= ENV.fetch("KAMAL_HOST", "REPLACE_WITH_VPS_IP") %>
+  worker:
+    hosts:
+      - <%= ENV.fetch("KAMAL_HOST", "REPLACE_WITH_VPS_IP") %>
+    cmd: bundle exec sidekiq -C config/sidekiq.yml
+
+# Kamal Proxy terminates TLS (Let's Encrypt) and routes traffic to the web container on port 80.
+proxy:
+  ssl: true
+  host: <%= ENV.fetch("APP_HOST", "open.news") %>
+  app_port: 80
+  healthcheck:
+    path: /health/live
+    interval: 5
+    timeout: 5
+
+# GitHub Container Registry (GHCR)
+registry:
+  server: ghcr.io
+  username: librenews
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
+
+ssh:
+  user: <%= ENV.fetch("KAMAL_SSH_USER", "deploy") %>
+
+# All runtime settings come from environment variables so the same Docker image runs
+# unmodified on Kamal 2, Railway, Render, Fly.io, or Docker Compose.
+env:
+  clear:
+    RAILS_ENV: production
+    APP_BASE_URL: https://<%= ENV.fetch("APP_HOST", "open.news") %>
+    RAILS_MAX_THREADS: "5"
+    SIDEKIQ_CONCURRENCY: "10"
+    REDIS_URL: redis://opendotnews-redis:6379/0
+    FEED_POLL_INTERVAL_MINUTES: "15"
+    FEED_MAX_BYTES: "5242880"
+    FEED_MAX_DECOMPRESSED_BYTES: "10485760"
+    OPML_MAX_BYTES: "2097152"
+    OPML_MAX_FEEDS: "2000"
+    INBOX_RETENTION_DAYS: "90"
+  secret:
+    - RAILS_MASTER_KEY
+    - SECRET_KEY_BASE
+    - DATABASE_URL
+    - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+    - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+    - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+
+# Persistent stateful containers managed as Kamal accessories on the VPS.
+accessories:
+  postgres:
+    image: postgres:17-alpine
+    host: <%= ENV.fetch("KAMAL_HOST", "REPLACE_WITH_VPS_IP") %>
+    env:
+      clear:
+        POSTGRES_USER: opendotnews
+        POSTGRES_DB: opendotnews_production
+      secret:
+        - POSTGRES_PASSWORD
+    volumes:
+      - /var/lib/opendotnews/postgres:/var/lib/postgresql/data
+    options:
+      restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    host: <%= ENV.fetch("KAMAL_HOST", "REPLACE_WITH_VPS_IP") %>
+    cmd: redis-server --appendonly yes --maxmemory-policy noeviction
+    volumes:
+      - /var/lib/opendotnews/redis:/data
+    options:
+      restart: unless-stopped
+
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  shell: app exec --interactive --reuse "bash"
+  logs: app logs -f
+  dbc: app exec --interactive --reuse "bin/rails dbconsole"

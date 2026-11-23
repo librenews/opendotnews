@@ -30,7 +30,7 @@ class ApplicationController < ActionController::Base
   def require_authentication
     return if signed_in?
 
-    session[:return_to] = request.fullpath if request.get?
+    session[:return_to] = request.fullpath if request.request_method == "GET"
     redirect_to login_path, alert: "Please sign in to continue."
   end
 

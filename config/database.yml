@@ -80,6 +80,8 @@ test:
 #
 production:
   <<: *default
-  database: opendotnews_production
-  username: opendotnews
-  password: <%= ENV["OPEN_NEWS_DATABASE_PASSWORD"] %>
+  url: <%= ENV["DATABASE_URL"] %>
+  database: <%= ENV.fetch("POSTGRES_DB", "opendotnews_production") %>
+  username: <%= ENV.fetch("POSTGRES_USER", "opendotnews") %>
+  password: <%= ENV["POSTGRES_PASSWORD"] || ENV["OPEN_NEWS_DATABASE_PASSWORD"] %>
+  host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>

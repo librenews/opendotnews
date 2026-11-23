@@ -42,7 +42,13 @@ bundle exec rails runner db/seeds_demo.rb
 bundle exec rspec
 ```
 
-## Docker Compose (Self-Hosting / Local Dev)
+## Production Deployment (Docker + Kamal 2)
+
+Open.News ships as a standard environment-configured Docker image ([Dockerfile](Dockerfile)) with **Kamal 2** ([config/deploy.yml](config/deploy.yml)) as the reference deployment method on a single Ubuntu VPS (separate containers for Puma, Sidekiq, PostgreSQL 17, and Redis behind Kamal Proxy HTTPS). The same image deploys unmodified on Railway, Render, or Fly.io.
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for full VPS setup, Kamal 2 commands, automated off-host PostgreSQL backups ([script/backup_postgres.sh](script/backup_postgres.sh)), and restore drills ([script/restore_postgres.sh](script/restore_postgres.sh)).
+
+## Docker Compose (Local Development)
 
 ```bash
 docker compose up --build
