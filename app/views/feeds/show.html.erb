@@ -22,12 +22,33 @@
     <% end %>
   </ul>
 
-  <h3>Real-Time Protocol Discovery (Phase 2 Readiness)</h3>
+  <h3>Real-Time Upstream Push Subscriptions (WebSub / rssCloud)</h3>
   <ul class="list">
-    <li><strong>WebSub Hub:</strong> <code><%= @feed.discovered_websub_hub.presence || "none advertised" %></code></li>
-    <li><strong>WebSub Topic:</strong> <code><%= @feed.discovered_websub_topic.presence || "none advertised" %></code></li>
-    <li><strong>rssCloud Endpoint:</strong> <code><%= @feed.discovered_rsscloud_endpoint.presence || "none advertised" %></code> (<%= @feed.discovered_rsscloud_protocol.presence || "n/a" %>)</li>
+    <li><strong>Discovered WebSub Hub:</strong> <code><%= @feed.discovered_websub_hub.presence || "none advertised" %></code></li>
+    <li><strong>Discovered WebSub Topic:</strong> <code><%= @feed.discovered_websub_topic.presence || "none advertised" %></code></li>
+    <li><strong>Discovered rssCloud Endpoint:</strong> <code><%= @feed.discovered_rsscloud_endpoint.presence || "none advertised" %></code> (<%= @feed.discovered_rsscloud_protocol.presence || "n/a" %>)</li>
   </ul>
+
+  <% if @push_subscriptions.any? %>
+    <ul class="list" style="margin-top: 0.5rem;">
+      <% @push_subscriptions.each do |ps| %>
+        <li>
+          <span class="badge"><%= ps.protocol %></span>
+          <span class="badge <%= ps.status == 'active' ? 'ok' : (ps.status == 'error' ? 'error' : '') %>"><%= ps.status %></span>
+          <code><%= ps.hub_url %></code>
+          <div class="muted">
+            Lease expires: <%= ps.lease_expires_at&.iso8601 || "n/a" %>
+            &middot; Next renew: <%= ps.next_renew_at&.iso8601 || "n/a" %>
+            &middot; Last delivery: <%= ps.last_delivery_at&.iso8601 || "never" %>
+            &middot; Failures: <%= ps.failure_count %>
+          </div>
+          <% if ps.last_error.present? %>
+            <div class="muted" style="color: var(--danger);"><%= ps.last_error %></div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
 
   <% if @feed.last_diagnostics.present? %>
     <h3>Last Diagnostics Snapshot</h3>

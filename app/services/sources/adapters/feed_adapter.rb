@@ -124,7 +124,10 @@ module Sources
         {
           items: items,
           source_attributes: source_attributes,
-          source_metadata: { "self_url" => parsed.self_url }.compact,
+          source_metadata: {
+            "self_url" => parsed.self_url,
+            "rsscloud_register_procedure" => parsed.rsscloud_register_procedure
+          }.compact,
           diagnostics: diagnostics
         }
       end

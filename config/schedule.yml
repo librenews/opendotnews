@@ -10,6 +10,12 @@ schedule_due_feeds:
   queue: "scheduled"
   description: "Enqueue shared feed fetches that are due for polling"
 
+renew_upstream_push:
+  cron: "*/15 * * * *"
+  class: "Push::RenewUpstreamJob"
+  queue: "scheduled"
+  description: "Renew expiring WebSub/rssCloud upstream push leases and recover staged payloads"
+
 purge_expired_inbox:
   cron: "0 3 * * *"
   class: "Maintenance::PurgeExpiredInboxJob"

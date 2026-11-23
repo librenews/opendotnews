@@ -7,6 +7,8 @@ class Feed < ApplicationRecord
   has_many :user_feed_subscriptions, dependent: :destroy
   has_many :active_user_subscriptions, -> { active }, class_name: "UserFeedSubscription"
   has_many :subscribers, through: :active_user_subscriptions, source: :user
+  has_many :upstream_push_subscriptions, dependent: :destroy
+  has_many :staged_push_payloads, dependent: :destroy
 
   validates :canonical_url, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }

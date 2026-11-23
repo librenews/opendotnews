@@ -70,4 +70,15 @@ Each `Feed` records operational diagnostics needed to debug polling, WebSub, and
 - `discovered_websub_hub`, `discovered_websub_topic`, `discovered_rsscloud_endpoint`, `discovered_rsscloud_protocol`
 - `last_diagnostics` JSONB snapshot (item counts, redirect count, response bytes, protocol advertisement flags)
 
-Authorized subscribers and admins can inspect per-feed diagnostics at `GET /feeds/:id` and via MCP `list_subscriptions` / `subscribe_feed`.
+## 5. Upstream Real-Time Push (Phase 2: WebSub & rssCloud)
+
+One shared `UpstreamPushSubscription` is maintained per canonical `Feed` (preferring WebSub when advertised, else rssCloud), managed by [Push::Reconciler](../app/services/push/reconciler.rb):
+
+- **WebSub Subscriber ([WebSub::Subscriber](../app/services/web_sub/subscriber.rb), `/callbacks/websub/:token`):**
+  - Stores `secret` and `callback_token` encrypted at rest via Active Record Encryption; looks up callbacks strictly by `callback_token_digest`.
+  - Verifies intent (`subscribe` / `unsubscribe` / `denied`), enforces constant-time `X-Hub-Signature` HMAC verification, durably persists payloads in `staged_push_payloads` before returning `202 Accepted`, and ingests full RSS/Atom updates directly via `Sources::Adapters::FeedAdapter` + `Feeds::Ingest` without a follow-up HTTP fetch.
+  - Malformed or non-feed payloads fail safely and fall back to a guarded `Feeds::FetchJob`.
+- **rssCloud Consumer ([RssCloud::Consumer](../app/services/rss_cloud/consumer.rb), `/callbacks/rsscloud/:token`):**
+  - Supports both REST (`http-post`) and XML-RPC (`pleaseNotify`) registrations with 25-hour lease / <24-hour renewal.
+  - Validates challenge URLs, rejects unknown/arbitrary topic URLs and XXE payloads, and coalesces burst pings per feed into a single guarded `Feeds::FetchJob`.
+- **Resilience:** Polling via `Feeds::ScheduleDueJob` remains active as a fallback if an upstream hub fails or disappears, and `Push::RenewUpstreamJob` runs every 15 minutes to renew expiring leases, retire subscriptions with zero active users, and recover any orphaned `staged_push_payloads`.

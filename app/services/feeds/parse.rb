@@ -19,6 +19,7 @@ module Feeds
       :websub_topic,
       :rsscloud_endpoint,
       :rsscloud_protocol,
+      :rsscloud_register_procedure,
       :items
     )
 
@@ -88,7 +89,7 @@ module Feeds
       hub_link = channel.xpath("./*[local-name()='link' and @rel='hub']/@href").first&.value
 
       cloud_node = channel.at_xpath("./*[local-name()='cloud']")
-      rsscloud_endpoint, rsscloud_protocol = extract_rsscloud(cloud_node)
+      rsscloud_endpoint, rsscloud_protocol, rsscloud_reg_proc = extract_rsscloud(cloud_node)
 
       raw_items = (channel.xpath("./*[local-name()='item']").to_a.presence || doc.root.xpath("./*[local-name()='item']").to_a)
       items = raw_items.map { |node| parse_rss_item(node) }
@@ -106,6 +107,7 @@ module Feeds
         websub_topic: websub_topic,
         rsscloud_endpoint: rsscloud_endpoint,
         rsscloud_protocol: rsscloud_protocol,
+        rsscloud_register_procedure: rsscloud_reg_proc,
         items: items
       )
     end
@@ -147,7 +149,7 @@ module Feeds
       hub_href = root.xpath("./*[local-name()='link' and @rel='hub']/@href").first&.value
 
       cloud_node = root.at_xpath("./*[local-name()='cloud']")
-      rsscloud_endpoint, rsscloud_protocol = extract_rsscloud(cloud_node)
+      rsscloud_endpoint, rsscloud_protocol, rsscloud_reg_proc = extract_rsscloud(cloud_node)
 
       items = root.xpath("./*[local-name()='entry']").map { |entry| parse_atom_entry(entry) }
 
@@ -164,6 +166,7 @@ module Feeds
         websub_topic: websub_topic,
         rsscloud_endpoint: rsscloud_endpoint,
         rsscloud_protocol: rsscloud_protocol,
+        rsscloud_register_procedure: rsscloud_reg_proc,
         items: items
       )
     end
@@ -206,19 +209,20 @@ module Feeds
     end
 
     def extract_rsscloud(node)
-      return [ nil, nil ] unless node
+      return [ nil, nil, nil ] unless node
 
       domain = node["domain"]&.strip
       path = node["path"]&.strip
       port = node["port"]&.strip
       protocol = node["protocol"]&.strip.presence || "http-post"
-      return [ nil, nil ] if domain.blank? || path.blank?
+      register_proc = node["registerProcedure"]&.strip.presence
+      return [ nil, nil, nil ] if domain.blank? || path.blank?
 
       scheme = port == "443" ? "https" : "http"
       port_part = (port.present? && !%w[80 443].include?(port)) ? ":#{port}" : ""
       normalized_path = path.start_with?("/") ? path : "/#{path}"
       endpoint = UrlNormalizer.normalize("#{scheme}://#{domain}#{port_part}#{normalized_path}")
-      [ endpoint, protocol ]
+      [ endpoint, protocol, register_proc ]
     end
 
     def parse_link_headers(raw)

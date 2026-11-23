@@ -11,5 +11,6 @@ class FeedsController < ApplicationController
 
     @item_count = @feed.feed_items.visible.count
     @aliases = @feed.feed_aliases.order(created_at: :asc)
+    @push_subscriptions = @feed.upstream_push_subscriptions.order(created_at: :desc).limit(10)
   end
 end

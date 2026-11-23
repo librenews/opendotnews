@@ -16,6 +16,12 @@ Rails.application.routes.draw do
   post "/mcp", to: "mcp#handle"
   get "/mcp", to: "mcp#method_not_allowed"
 
+  # Upstream push protocol callbacks (Phase 2: WebSub subscriber & rssCloud consumer)
+  get "/callbacks/websub/:token", to: "callbacks/web_sub#verify", as: :websub_callback
+  post "/callbacks/websub/:token", to: "callbacks/web_sub#notify"
+  get "/callbacks/rsscloud/:token", to: "callbacks/rss_cloud#verify", as: :rsscloud_callback
+  post "/callbacks/rsscloud/:token", to: "callbacks/rss_cloud#notify"
+
   # Minimal server-rendered web UI
   root "dashboard#index"
   get "/dashboard", to: "dashboard#index", as: :dashboard

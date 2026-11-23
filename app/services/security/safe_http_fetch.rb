@@ -69,6 +69,10 @@ module Security
       new(**opts).get(url)
     end
 
+    def self.post(url, body:, content_type:, **opts)
+      new(**opts).post(url, body: body, content_type: content_type)
+    end
+
     def self.blocked_ip?(raw_ip)
       ip = IPAddr.new(raw_ip.to_s)
       ip = ip.native if ip.ipv4_mapped?
@@ -135,6 +139,29 @@ module Security
       end
 
       raise TooManyRedirectsError, "exceeded max redirects (#{@max_redirects})"
+    end
+
+    # SSRF-safe HTTP POST with DNS pinning and bounded response reading (never follows redirects blindly).
+    def post(url, body:, content_type: "application/x-www-form-urlencoded", headers: {})
+      uri = validate_uri!(url.to_s.strip)
+      pinned_ip = resolve_and_validate_ip!(uri.host)
+
+      raw_response, raw_body = perform_post(uri, pinned_ip, body: body.to_s, content_type: content_type, extra: headers)
+      code = raw_response.code.to_i
+      decoded = decode_body(raw_body, raw_response["content-encoding"])
+
+      Response.new(
+        status: code,
+        body: decoded,
+        headers: normalize_headers(raw_response),
+        content_type: raw_response["content-type"].to_s,
+        final_url: uri.to_s,
+        redirect_chain: [],
+        etag: raw_response["etag"],
+        last_modified: raw_response["last-modified"],
+        retry_after: raw_response["retry-after"],
+        cache_control: raw_response["cache-control"]
+      )
     end
 
     private
@@ -232,6 +259,46 @@ module Security
     rescue Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT,
            Errno::EHOSTUNREACH, OpenSSL::SSL::SSLError, EOFError, IOError, SocketError => e
       raise NetworkError, "HTTP fetch failed: #{e.class}: #{e.message}"
+    end
+
+    def perform_post(uri, pinned_ip, body:, content_type:, extra: {})
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.ipaddr = pinned_ip if http.respond_to?(:ipaddr=) && !webmock_active?
+      http.use_ssl = (uri.scheme.downcase == "https")
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER if http.use_ssl?
+      http.open_timeout = [ @timeout, 10 ].min
+      http.read_timeout = @timeout
+      http.write_timeout = [ @timeout, 10 ].min
+
+      req = Net::HTTP::Post.new(uri.request_uri)
+      req["User-Agent"] = @user_agent
+      req["Content-Type"] = content_type
+      req["Accept-Encoding"] = "gzip, deflate, identity"
+      @extra_headers.each { |k, v| req[k] = v }
+      (extra || {}).each { |k, v| req[k] = v }
+      req.body = body
+
+      raw_response = nil
+      buffer = +"".b
+
+      http.start do |conn|
+        conn.request(req) do |resp|
+          raw_response = resp
+          resp.read_body do |chunk|
+            if buffer.bytesize + chunk.bytesize > @max_bytes
+              raise ResponseTooLargeError, "response body exceeded limit #{@max_bytes} bytes"
+            end
+            buffer << chunk
+          end
+        end
+      end
+
+      [ raw_response, buffer ]
+    rescue SsrfBlockedError, ResponseTooLargeError, InvalidUrlError
+      raise
+    rescue Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT,
+           Errno::EHOSTUNREACH, OpenSSL::SSL::SSLError, EOFError, IOError, SocketError => e
+      raise NetworkError, "HTTP POST failed: #{e.class}: #{e.message}"
     end
 
     def decode_body(raw_body, encoding)

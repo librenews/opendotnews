@@ -2,7 +2,7 @@
 
 **Open.News** is an open-source, self-hostable, agent-native RSS/Atom subscription, archive, search, and Markdown publishing service built as a Rails 8 monolith with PostgreSQL and Sidekiq/Redis.
 
-## Current Status — Phase 0 + Phase 1 + Phase 1.1 Complete
+## Current Status — Phase 0 + Phase 1 + Phase 1.1 + Phase 2 Complete
 
 - **Foundation (Phase 0):** Rails 8 + PostgreSQL 17 (UUID PKs, generated weighted `tsvector` GIN full-text search, monotonic bigint inbox cursors), Sidekiq + `sidekiq-cron` + Redis, `Security::SafeHttpFetch` (manual DNS resolution + CIDR blocking + `Net::HTTP#ipaddr=` pinning, bounded redirects, gzip/deflate decompression caps), transactional outbox (`FOR UPDATE SKIP LOCKED` + `after_commit` trigger + sweeper), `/health/live` & `/health/ready`.
 - **Agent-Native Feed Reader & Shared Content Core (Phase 1 & 1.1):**
@@ -13,9 +13,13 @@
   - Bounded OPML 1.0/2.0 import and OPML 2.0 export.
   - Standards-compliant OAuth 2.1 (Doorkeeper + PKCE S256 + hashed tokens + `/.well-known/oauth-protected-resource` + `/.well-known/oauth-authorization-server` + RFC 7591 Dynamic Client Registration at `/oauth/register`) and Streamable HTTP MCP at `POST /mcp` (`subscribe_feed`, `unsubscribe_feed`, `list_subscriptions`, `list_feed_items`, `get_feed_item`, `search_items`, `get_updates`, `import_opml`, `get_opml_import_status`, `export_opml`).
   - Minimal server-rendered Rails UI (signup/namespace claim, login, feed dashboard, per-feed operational diagnostics at `/feeds/:id`, search, OPML import/export, OAuth connection revocation).
-  - See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the shared content model and adapter contract.
+- **Upstream Real-Time Ingestion (Phase 2):**
+  - Shared per-feed **WebSub subscriber** (`/callbacks/websub/:token`): hub/topic discovery (`Link` headers + feed XML), encrypted shared secrets & callback tokens (Active Record Encryption), verification of intent, constant-time `X-Hub-Signature` HMAC validation, durable staging (`staged_push_payloads`), direct full-feed ingestion without redundant refetch, lease renewal, hub migration, and unsubscribe retirement.
+  - Shared per-feed **rssCloud consumer** (`/callbacks/rsscloud/:token`): REST `http-post` and XML-RPC `pleaseNotify` registration, 25h lease / <24h renewal, challenge verification, REST + XML-RPC ping ingress, topic validation, XXE rejection, and per-feed ping coalescing into guarded `Feeds::FetchJob` refetches.
+  - Automatic reconciliation (`Push::Reconciler`), recurring renewal/recovery (`sidekiq-cron`), polling fallback, and live status in `/feeds/:id`.
+  - See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the shared content model, adapter contract, and upstream push flow.
 
-*(Phases 2–5 will add upstream WebSub/rssCloud ingestion, hosted Markdown publishing + RSS/Atom generation, downstream WebSub hub & rssCloud cloud server, and production hardening.)*
+*(Phases 3–5 will add hosted Markdown publishing + RSS/Atom generation, downstream WebSub hub & rssCloud cloud server, and production hardening.)*
 
 ## Local Setup (macOS / Homebrew Postgres 17 + Redis + rbenv)
 

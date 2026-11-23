@@ -12,6 +12,10 @@ class Rack::Attack
   throttle("mcp/ip", limit: 300, period: 1.minute) do |req|
     req.ip if req.path == "/mcp" && req.post?
   end
+
+  throttle("callbacks/ip", limit: 120, period: 1.minute) do |req|
+    req.ip if req.path.start_with?("/callbacks/")
+  end
 end
 
 Rails.application.config.middleware.use Rack::Attack unless Rails.env.test?

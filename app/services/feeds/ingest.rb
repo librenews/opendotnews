@@ -142,9 +142,21 @@ module Feeds
       end
 
       Result.new(status: :ok, created_count: created, updated_count: updated, unchanged_count: unchanged)
+    ensure
+      maybe_enqueue_upstream_push!
     end
 
     private
+
+    def maybe_enqueue_upstream_push!
+      return unless @feed.discovered_websub_hub.present? || @feed.discovered_rsscloud_endpoint.present?
+      return if @feed.active_subscriber_count == 0
+      return if @feed.upstream_push_subscriptions.live.exists?
+
+      Push::RegisterUpstreamJob.perform_async(@feed.id)
+    rescue StandardError => e
+      Rails.logger.warn("Skipping upstream push enqueue for feed #{@feed.id}: #{e.class}: #{e.message}")
+    end
 
     def resolve_normalized_items
       raw_list = if !@normalized_items.nil?

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_000005) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_000006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -250,6 +250,52 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000005) do
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
+  create_table "staged_push_payloads", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "upstream_push_subscription_id", null: false
+    t.uuid "feed_id", null: false
+    t.string "content_type"
+    t.jsonb "headers", default: {}, null: false
+    t.text "body", null: false
+    t.string "body_sha256", null: false
+    t.string "status", default: "pending", null: false
+    t.text "error_message"
+    t.datetime "received_at", null: false
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feed_id"], name: "index_staged_push_payloads_on_feed_id"
+    t.index ["status", "received_at"], name: "index_staged_push_payloads_on_status_and_received_at"
+    t.index ["upstream_push_subscription_id"], name: "index_staged_push_payloads_on_upstream_push_subscription_id"
+  end
+
+  create_table "upstream_push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "feed_id", null: false
+    t.string "protocol", null: false
+    t.string "hub_url", null: false
+    t.string "topic_url", null: false
+    t.string "callback_token_digest", null: false
+    t.text "callback_token", null: false
+    t.text "secret"
+    t.string "status", default: "pending", null: false
+    t.string "requested_mode", default: "subscribe", null: false
+    t.integer "lease_seconds"
+    t.datetime "lease_expires_at"
+    t.datetime "last_requested_at"
+    t.datetime "last_confirmed_at"
+    t.datetime "last_delivery_at"
+    t.datetime "next_renew_at"
+    t.integer "failure_count", default: 0, null: false
+    t.text "last_error"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["callback_token_digest"], name: "index_upstream_push_subscriptions_on_callback_token_digest", unique: true
+    t.index ["feed_id", "protocol", "hub_url", "topic_url"], name: "index_active_upstream_push_subscriptions", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'active'::character varying, 'unsubscribing'::character varying])::text[]))"
+    t.index ["feed_id"], name: "index_upstream_push_subscriptions_on_feed_id"
+    t.index ["status", "lease_expires_at"], name: "index_upstream_push_expirations"
+    t.index ["status", "next_renew_at"], name: "index_upstream_push_renewals"
+  end
+
   create_table "user_feed_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "user_id", null: false
     t.uuid "feed_id", null: false
@@ -326,6 +372,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000005) do
   add_foreign_key "opml_imports", "users", on_delete: :cascade
   add_foreign_key "publications", "users", on_delete: :cascade
   add_foreign_key "sessions", "users", on_delete: :cascade
+  add_foreign_key "staged_push_payloads", "feeds", on_delete: :cascade
+  add_foreign_key "staged_push_payloads", "upstream_push_subscriptions", on_delete: :cascade
+  add_foreign_key "upstream_push_subscriptions", "feeds", on_delete: :cascade
   add_foreign_key "user_feed_subscriptions", "feeds", on_delete: :cascade
   add_foreign_key "user_feed_subscriptions", "users", on_delete: :cascade
   add_foreign_key "user_inbox_events", "feed_items", on_delete: :nullify
