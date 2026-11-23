@@ -1,0 +1,8 @@
+:concurrency: <%= ENV.fetch("SIDEKIQ_CONCURRENCY", 10) %>
+:queues:
+  - [critical_callbacks, 6]
+  - [fanout, 5]
+  - [ingestion, 4]
+  - [scheduled, 3]
+  - [default, 2]
+  - [maintenance, 1]

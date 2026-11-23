@@ -1,0 +1,26 @@
+<div class="card">
+  <h2>Connected AI Agents &amp; OAuth Applications</h2>
+  <p class="muted">
+    MCP endpoint: <code><%= "#{OpenNews.config.app_base_url}/mcp" %></code><br>
+    OAuth discovery: <code><%= "#{OpenNews.config.app_base_url}/.well-known/oauth-protected-resource" %></code>
+  </p>
+
+  <% if @tokens.empty? %>
+    <p class="muted">No active OAuth connections.</p>
+  <% else %>
+    <ul class="list">
+      <% @tokens.each do |tok| %>
+        <li class="row">
+          <div>
+            <strong><%= tok.application&.name || "Unknown client" %></strong>
+            <div class="muted">
+              Scopes: <code><%= tok.scopes.to_s %></code> &middot;
+              Issued <%= tok.created_at.strftime("%Y-%m-%d %H:%M UTC") %>
+            </div>
+          </div>
+          <%= button_to "Revoke", revoke_oauth_connection_path(tok.id), method: :delete, class: "danger", form: { class: "inline-form" } %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

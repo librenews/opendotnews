@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Open.News</title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "application" %>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="<%= signed_in? ? dashboard_path : login_path %>">Open.News</a>
+      <nav>
+        <% if signed_in? %>
+          <span class="muted">@<%= current_user.namespace %></span>
+          <a href="<%= dashboard_path %>">Feeds</a>
+          <a href="<%= export_opml_path %>">Export OPML</a>
+          <a href="<%= oauth_connections_path %>">Agent Connections</a>
+          <%= button_to "Sign out", logout_path, method: :delete, class: "secondary", form: { class: "inline-form" } %>
+        <% else %>
+          <a href="<%= login_path %>">Sign in</a>
+          <a href="<%= signup_path %>">Sign up</a>
+        <% end %>
+      </nav>
+    </header>
+
+    <main class="container">
+      <% if flash[:notice].present? %>
+        <div class="flash notice"><%= flash[:notice] %></div>
+      <% end %>
+      <% if flash[:alert].present? %>
+        <div class="flash alert"><%= flash[:alert] %></div>
+      <% end %>
+      <%= yield %>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,110 @@
+<div class="grid">
+  <aside>
+    <div class="card">
+      <h3>Subscribe to a feed</h3>
+      <%= form_with url: subscriptions_path, method: :post, local: true do |f| %>
+        <%= f.url_field :url, placeholder: "https://example.org/blog or feed URL", required: true %>
+        <%= f.text_field :folder, placeholder: "Folder (optional)" %>
+        <%= f.submit "Subscribe", class: "btn" %>
+      <% end %>
+    </div>
+
+    <div class="card">
+      <h3>Import OPML</h3>
+      <%= form_with url: import_opml_path, method: :post, multipart: true, local: true do |f| %>
+        <%= f.file_field :opml_file, accept: ".opml,.xml" %>
+        <div style="margin-top: 0.5rem;">
+          <%= f.submit "Upload OPML", class: "btn secondary" %>
+        </div>
+      <% end %>
+      <% if @recent_imports.any? %>
+        <ul class="list" style="margin-top: 0.75rem;">
+          <% @recent_imports.each do |imp| %>
+            <li class="muted">
+              <span class="badge"><%= imp.status %></span>
+              <%= imp.success_count %>/<%= imp.total_count %> added,
+              <%= imp.skipped_count %> skipped, <%= imp.error_count %> errors
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+
+    <div class="card">
+      <h3>Subscriptions (<%= @subscriptions.size %>)</h3>
+      <% if @subscriptions.empty? %>
+        <p class="muted">No subscriptions yet.</p>
+      <% else %>
+        <ul class="list">
+          <% @subscriptions.each do |sub| %>
+            <li>
+              <div class="row">
+                <a href="<%= dashboard_path(feed_id: sub.feed_id) %>">
+                  <strong><%= sub.feed.title.presence || sub.feed.canonical_url %></strong>
+                </a>
+                <span class="badge <%= sub.feed.status == 'error' ? 'error' : 'ok' %>"><%= sub.feed.status %></span>
+              </div>
+              <div class="muted">
+                <% if sub.folder_name.present? %>[<%= sub.folder_name %>] <% end %>
+                <% if sub.feed.last_fetched_at %>fetched <%= time_ago_in_words(sub.feed.last_fetched_at) %> ago<% else %>pending fetch<% end %>
+              </div>
+              <% if sub.feed.last_error.present? %>
+                <div class="muted" style="color: var(--danger);"><%= sub.feed.last_error.truncate(120) %></div>
+              <% end %>
+              <div style="margin-top: 0.3rem;">
+                <%= button_to "Unsubscribe", subscription_path(sub.feed_id), method: :delete, class: "secondary", form: { class: "inline-form" } %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+  </aside>
+
+  <section>
+    <div class="card">
+      <%= form_with url: dashboard_path, method: :get, local: true do |f| %>
+        <div class="row">
+          <%= f.text_field :q, value: @query, placeholder: "Search archived items from your subscribed feeds..." %>
+          <%= f.hidden_field :feed_id, value: @selected_feed_id %>
+          <%= f.submit "Search", class: "btn" %>
+        </div>
+      <% end %>
+      <% if @query.present? || @selected_feed_id.present? %>
+        <div class="muted">
+          Showing <%= @items.size %> items
+          <% if @query.present? %> matching "<%= @query %>"<% end %>
+          — <a href="<%= dashboard_path %>">clear filters</a>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="card">
+      <h2><%= @query.present? ? "Search Results" : "Recent Items" %></h2>
+      <% if @items.empty? %>
+        <p class="muted">No archived items yet. Subscribe to a feed or import an OPML file to start building your archive.</p>
+      <% else %>
+        <ul class="list">
+          <% @items.each do |item| %>
+            <li>
+              <div class="row">
+                <a href="<%= feed_item_path(item) %>"><strong><%= item.title.presence || "(untitled)" %></strong></a>
+                <span class="muted"><%= (item.published_at || item.first_seen_at)&.strftime("%Y-%m-%d %H:%M UTC") %></span>
+              </div>
+              <div class="muted">
+                <%= item.feed&.title.presence || item.feed&.canonical_url %>
+                <% if item.author.present? %> &middot; <%= item.author %><% end %>
+                <% if item.external_url.present? %>
+                  &middot; <a href="<%= item.external_url %>" target="_blank" rel="noopener noreferrer">source</a>
+                <% end %>
+              </div>
+              <% if item.summary_text.present? %>
+                <p style="margin: 0.35rem 0 0;"><%= item.summary_text.truncate(280) %></p>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+  </section>
+</div>

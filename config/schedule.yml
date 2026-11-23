@@ -1,0 +1,17 @@
+dispatch_outbox_sweeper:
+  cron: "* * * * *"
+  class: "Events::DispatchOutboxJob"
+  queue: "scheduled"
+  description: "Sweep any undispatched transactional outbox events"
+
+schedule_due_feeds:
+  cron: "* * * * *"
+  class: "Feeds::ScheduleDueJob"
+  queue: "scheduled"
+  description: "Enqueue shared feed fetches that are due for polling"
+
+purge_expired_inbox:
+  cron: "0 3 * * *"
+  class: "Maintenance::PurgeExpiredInboxJob"
+  queue: "maintenance"
+  description: "Prune user_inbox_events older than configured retention window"
