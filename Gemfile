@@ -10,6 +10,7 @@ gem "thruster", require: false
 
 # Background jobs & recurring schedules
 gem "sidekiq", "~> 7.3"
+gem "connection_pool", "~> 2.5" # sidekiq 7.3 expects connection_pool 2.x TimedStack#pop signature
 gem "sidekiq-cron", "~> 2.0"
 
 # OAuth 2.1 provider (Authorization Code + PKCE + scopes + hashed tokens)
