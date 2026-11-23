@@ -82,3 +82,20 @@ One shared `UpstreamPushSubscription` is maintained per canonical `Feed` (prefer
   - Supports both REST (`http-post`) and XML-RPC (`pleaseNotify`) registrations with 25-hour lease / <24-hour renewal.
   - Validates challenge URLs, rejects unknown/arbitrary topic URLs and XXE payloads, and coalesces burst pings per feed into a single guarded `Feeds::FetchJob`.
 - **Resilience:** Polling via `Feeds::ScheduleDueJob` remains active as a fallback if an upstream hub fails or disappears, and `Push::RenewUpstreamJob` runs every 15 minutes to renew expiring leases, retire subscriptions with zero active users, and recover any orphaned `staged_push_payloads`.
+
+---
+
+## 6. Markdown Publishing & Downstream Real-Time Syndication (Phases 3 & 4)
+
+Each user owns a `Publication` bound to their `namespace`, with revisioned `Document` / `DocumentRevision` rows served under `/:namespace/*path` (with `Accept: text/markdown` vs sanitized HTML, `Vary: Accept`, distinct ETags, optional `.md` alias, and `410 Gone` soft-delete tombstones) plus generated RSS 2.0 (`/:namespace/feed.xml`) and Atom 1.0 (`/:namespace/feed.atom`).
+
+Every public publication mutation commits a `publication.feed_changed` row to `outbox_events`, which dispatches `Publishing::FanoutFeedChangeJob` (`Events::PublicationFanout`) to active `DownstreamSubscription` rows:
+
+- **WebSub Hub ([WebSub::Hub](../app/services/web_sub/hub.rb), `POST /websub/hub`):**
+  - Resolves topics exclusively via [Publishing::HostedTopicResolver](../app/services/publishing/hosted_topic_resolver.rb) (rejects external URLs, private publications, SSRF targets, and secrets >= 200 bytes).
+  - Verifies intent via `WebSub::VerifySubscriptionJob` before activation, enforces finite clamped leases, encrypts subscriber secrets at rest, and delivers full RSS/Atom XML (`WebSub::DeliverContentJob`) with `X-Hub-Signature: sha256=<hex>` and `Link` headers.
+- **rssCloud Cloud Server ([RssCloud::Cloud](../app/services/rss_cloud/cloud.rb), `POST /rsscloud/pleaseNotify`, `POST /rsscloud/RPC2`, `POST /rsscloud/ping`):**
+  - Verifies callback reachability & challenge before activation, enforces 25-hour finite leases, rejects XXE and non-owned topics, and delivers lightweight feed-URL pings (`RssCloud::DeliverPingJob`) in `http-post` or `xml-rpc` format.
+- **Delivery Policy & Visibility:**
+  - [Delivery::OutcomeHandler](../app/services/delivery/outcome_handler.rb) marks `2xx` delivered, auto-unsubscribes on `410 Gone`, suspends on SSRF or repeated permanent `4xx`, and schedules exponential retries (respecting `Retry-After`) picked up every minute by `Delivery::RetryDueJob`.
+  - `Maintenance::ExpireLeasesJob` expires lapsed leases every 15 minutes; publication owners inspect subscribers and attempts at `/publishing/deliveries`.

@@ -22,6 +22,12 @@ Rails.application.routes.draw do
   get "/callbacks/rsscloud/:token", to: "callbacks/rss_cloud#verify", as: :rsscloud_callback
   post "/callbacks/rsscloud/:token", to: "callbacks/rss_cloud#notify"
 
+  # Downstream real-time syndication (Phase 4: WebSub hub & rssCloud cloud server)
+  post "/websub/hub", to: "web_sub_hub#handle"
+  post "/rsscloud/pleaseNotify", to: "rss_cloud_server#please_notify"
+  post "/rsscloud/RPC2", to: "rss_cloud_server#rpc2"
+  post "/rsscloud/ping", to: "rss_cloud_server#ping"
+
   # Minimal server-rendered web UI
   root "dashboard#index"
   get "/dashboard", to: "dashboard#index", as: :dashboard
@@ -35,6 +41,7 @@ Rails.application.routes.draw do
 
   resources :subscriptions, only: [ :create, :destroy ]
   resources :documents, only: [ :index, :new, :create, :edit, :update, :destroy ]
+  get "/publishing/deliveries", to: "publishing_deliveries#index", as: :publishing_deliveries
   get "/feeds/:id", to: "feeds#show", as: :feed_diagnostics
   get "/items/:id", to: "items#show", as: :feed_item
   patch "/items/:id/state", to: "items#update_state", as: :update_feed_item_state

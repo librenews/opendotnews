@@ -16,6 +16,14 @@ class Rack::Attack
   throttle("callbacks/ip", limit: 120, period: 1.minute) do |req|
     req.ip if req.path.start_with?("/callbacks/")
   end
+
+  throttle("websub_hub/ip", limit: 60, period: 1.minute) do |req|
+    req.ip if req.path == "/websub/hub" && req.post?
+  end
+
+  throttle("rsscloud_server/ip", limit: 60, period: 1.minute) do |req|
+    req.ip if req.path.start_with?("/rsscloud/") && req.post?
+  end
 end
 
 Rails.application.config.middleware.use Rack::Attack unless Rails.env.test?

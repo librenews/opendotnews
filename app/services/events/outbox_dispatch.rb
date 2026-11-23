@@ -44,11 +44,12 @@ module Events
       case event.event_type
       when "feed_item.created", "feed_item.updated"
         Events::MaterializeInboxJob.perform_async(event.id)
+      when "publication.feed_changed"
+        Publishing::FanoutFeedChangeJob.perform_async(event.id)
       when "document.created", "document.updated", "document.published",
-           "document.unpublished", "document.deleted", "publication.feed_changed",
+           "document.unpublished", "document.deleted",
            "upstream_subscription.renewal_due"
-        # Phase 2-4 fanout handlers plug in here.
-        Rails.logger.info("Outbox event recorded for future phase handler: #{event.event_type} (#{event.id})")
+        Rails.logger.info("Outbox lifecycle event recorded: #{event.event_type} (#{event.id})")
       else
         Rails.logger.warn("Unhandled outbox event_type: #{event.event_type}")
       end

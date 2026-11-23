@@ -1,0 +1,73 @@
+<div class="card">
+  <div class="row">
+    <h2>Downstream Push Subscribers (@<%= current_user.namespace %>)</h2>
+    <a class="btn" href="<%= documents_path %>">Back to Documents</a>
+  </div>
+  <p class="muted">
+    WebSub Hub: <code><%= "#{OpenNews.config.app_base_url}/websub/hub" %></code> &middot;
+    rssCloud: <code><%= "#{OpenNews.config.app_base_url}/rsscloud/pleaseNotify" %></code>
+  </p>
+
+  <% if @subscriptions.empty? %>
+    <p class="muted">No downstream WebSub or rssCloud subscribers yet.</p>
+  <% else %>
+    <ul class="list">
+      <% @subscriptions.each do |sub| %>
+        <li>
+          <div class="row">
+            <div>
+              <span class="badge <%= sub.active? ? 'ok' : '' %>"><%= sub.protocol %> / <%= sub.status %></span>
+              <strong><%= sub.callback_host %></strong>
+              <span class="muted">topic: <code><%= sub.topic_format %></code></span>
+            </div>
+            <div class="muted">
+              <% if sub.lease_expires_at %>
+                lease expires: <%= sub.lease_expires_at.utc.iso8601 %>
+              <% end %>
+              <% if sub.last_delivered_at %>
+                &middot; last delivered: <%= sub.last_delivered_at.utc.iso8601 %>
+              <% end %>
+              <% if sub.failure_count.positive? %>
+                &middot; failures: <%= sub.failure_count %>
+              <% end %>
+            </div>
+          </div>
+          <% if sub.last_error.present? %>
+            <div class="muted">Last error: <%= sub.last_error %></div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>
+
+<div class="card">
+  <h3>Recent Delivery Attempts</h3>
+  <% if @attempts.empty? %>
+    <p class="muted">No outbound push deliveries recorded yet.</p>
+  <% else %>
+    <ul class="list">
+      <% @attempts.each do |attempt| %>
+        <li>
+          <div class="row">
+            <div>
+              <span class="badge <%= attempt.status == 'delivered' ? 'ok' : '' %>"><%= attempt.status %></span>
+              <strong><%= attempt.downstream_subscription.protocol %></strong>
+              &rarr; <code><%= attempt.downstream_subscription.callback_host %></code>
+              <span class="muted">(attempt #<%= attempt.attempt_number %>, HTTP <%= attempt.http_status || "-" %>)</span>
+            </div>
+            <div class="muted">
+              <%= attempt.created_at.utc.iso8601 %>
+              <% if attempt.next_attempt_at %>
+                &middot; retry at: <%= attempt.next_attempt_at.utc.iso8601 %>
+              <% end %>
+            </div>
+          </div>
+          <% if attempt.last_error.present? %>
+            <div class="muted"><%= attempt.last_error %></div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

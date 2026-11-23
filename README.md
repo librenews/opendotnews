@@ -2,7 +2,7 @@
 
 **Open.News** is an open-source, self-hostable, agent-native RSS/Atom subscription, archive, search, and Markdown publishing service built as a Rails 8 monolith with PostgreSQL and Sidekiq/Redis.
 
-## Current Status — Phases 0, 1, 1.1, 2 & 3 Complete
+## Current Status — Phases 0, 1, 1.1, 2, 3 & 4 Complete
 
 - **Foundation (Phase 0):** Rails 8 + PostgreSQL 17 (UUID PKs, generated weighted `tsvector` GIN full-text search, monotonic bigint inbox cursors), Sidekiq + `sidekiq-cron` + Redis, `Security::SafeHttpFetch` (manual DNS resolution + CIDR blocking + `Net::HTTP#ipaddr=` pinning, bounded redirects, gzip/deflate decompression caps), transactional outbox (`FOR UPDATE SKIP LOCKED` + `after_commit` trigger + sweeper), `/health/live` & `/health/ready`.
 - **Agent-Native Feed Reader & Shared Content Core (Phase 1 & 1.1):**
@@ -21,9 +21,13 @@
   - Public delivery with `Accept: text/markdown` vs safe `Commonmarker` + `Loofah` HTML (`Vary: Accept`, representation-specific `ETag`, `304 Not Modified`, read-only `?revision=N`) plus optional `.md` alias sending `Link: <canonical>; rel="canonical"`.
   - Generated **RSS 2.0** (`/:namespace/feed.xml`) and **Atom 1.0** (`/:namespace/feed.atom`) with stable GUIDs/Atom IDs advertising both WebSub (`/websub/hub`) and rssCloud (`/rsscloud/pleaseNotify`).
   - 5 MCP publishing tools (`publish_document`, `get_document`, `update_document`, `list_documents`, `delete_document`) bringing the live MCP surface to 15 tools.
+- **Downstream Real-Time Syndication (Phase 4):**
+  - **WebSub Hub** (`POST /websub/hub`) restricted strictly to public hosted `/:namespace/feed.xml` and `/:namespace/feed.atom` feeds, with GET challenge verification, finite clamped leases, encrypted subscriber secrets, SSRF-safe delivery, and fat-push full XML + `X-Hub-Signature: sha256=...` HMAC + `Link` headers.
+  - **rssCloud Cloud Server** (`POST /rsscloud/pleaseNotify`, `POST /rsscloud/RPC2`, guarded `POST /rsscloud/ping`) supporting REST (`http-post`) and XML-RPC registrations with challenge verification, 25-hour finite leases, XXE rejection, and lightweight feed-URL ping fanout.
+  - Transactional outbox fanout (`publication.feed_changed` -> `Events::PublicationFanout`), explicit `DeliveryAttempt` tracking, exponential retry backoff (`Delivery::RetryDueJob`), automatic `410 Gone` unsubscription, periodic lease expiry (`Maintenance::ExpireLeasesJob`), and an owner delivery dashboard at `/publishing/deliveries`.
   - See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture overview.
 
-*(Phases 4–5 will add the downstream WebSub hub & rssCloud cloud server for hosted feeds, quotas, operator metrics, and final production conformance.)*
+*(Phase 5 will add operational quotas, operator metrics, security hardening, and final production conformance.)*
 
 ## Local Setup (macOS / Homebrew Postgres 17 + Redis + rbenv)
 

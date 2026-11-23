@@ -6,7 +6,8 @@
   <p class="muted">
     Public feeds:
     <a href="<%= "#{OpenNews.config.app_base_url}/#{current_user.namespace}/feed.xml" %>">feed.xml (RSS)</a> &middot;
-    <a href="<%= "#{OpenNews.config.app_base_url}/#{current_user.namespace}/feed.atom" %>">feed.atom (Atom)</a>
+    <a href="<%= "#{OpenNews.config.app_base_url}/#{current_user.namespace}/feed.atom" %>">feed.atom (Atom)</a> &middot;
+    <a href="<%= publishing_deliveries_path %>">Push Subscribers &amp; Deliveries</a>
   </p>
 
   <% if @documents.empty? %>

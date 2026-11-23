@@ -16,6 +16,18 @@ renew_upstream_push:
   queue: "scheduled"
   description: "Renew expiring WebSub/rssCloud upstream push leases and recover staged payloads"
 
+retry_due_deliveries:
+  cron: "* * * * *"
+  class: "Delivery::RetryDueJob"
+  queue: "scheduled"
+  description: "Retry due downstream WebSub and rssCloud push deliveries"
+
+expire_downstream_leases:
+  cron: "*/15 * * * *"
+  class: "Maintenance::ExpireLeasesJob"
+  queue: "maintenance"
+  description: "Expire lapsed downstream WebSub and rssCloud subscriptions"
+
 purge_expired_inbox:
   cron: "0 3 * * *"
   class: "Maintenance::PurgeExpiredInboxJob"

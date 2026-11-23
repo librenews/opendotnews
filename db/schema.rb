@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_000006) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_000007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -26,6 +26,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000006) do
     t.datetime "created_at", null: false
     t.index ["user_id", "created_at"], name: "index_audit_logs_on_user_id_and_created_at", order: { created_at: :desc }
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
+  end
+
+  create_table "delivery_attempts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "downstream_subscription_id", null: false
+    t.uuid "outbox_event_id", null: false
+    t.integer "attempt_number", default: 1, null: false
+    t.string "status", default: "pending", null: false
+    t.integer "http_status"
+    t.text "last_error"
+    t.datetime "next_attempt_at"
+    t.datetime "delivered_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["downstream_subscription_id", "outbox_event_id", "attempt_number"], name: "index_delivery_attempts_uniqueness", unique: true
+    t.index ["downstream_subscription_id"], name: "index_delivery_attempts_on_downstream_subscription_id"
+    t.index ["next_attempt_at"], name: "index_delivery_attempts_retry_due", where: "((status)::text = 'retry_scheduled'::text)"
+    t.index ["outbox_event_id"], name: "index_delivery_attempts_on_outbox_event_id"
   end
 
   create_table "document_revisions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -55,6 +72,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000006) do
     t.index ["publication_id", "path"], name: "index_documents_on_publication_id_and_path", unique: true
     t.index ["publication_id"], name: "index_documents_on_publication_id"
     t.index ["rss_guid"], name: "index_documents_on_rss_guid", unique: true
+  end
+
+  create_table "downstream_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "publication_id", null: false
+    t.string "protocol", null: false
+    t.string "topic_url", null: false
+    t.string "topic_format", null: false
+    t.string "callback_url", null: false
+    t.string "callback_host", null: false
+    t.text "secret"
+    t.string "status", default: "pending", null: false
+    t.string "verification_challenge_digest"
+    t.datetime "verification_expires_at"
+    t.integer "lease_seconds"
+    t.datetime "lease_expires_at"
+    t.integer "failure_count", default: 0, null: false
+    t.datetime "last_delivered_at"
+    t.text "last_error"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["callback_host"], name: "index_downstream_subscriptions_on_callback_host"
+    t.index ["protocol", "topic_url", "callback_url"], name: "index_downstream_subscriptions_identity", unique: true
+    t.index ["publication_id", "status"], name: "index_downstream_subs_by_pub_status"
+    t.index ["publication_id"], name: "index_downstream_subscriptions_on_publication_id"
+    t.index ["status", "lease_expires_at"], name: "index_downstream_subs_expirations"
   end
 
   create_table "feed_aliases", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -290,7 +333,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000006) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["callback_token_digest"], name: "index_upstream_push_subscriptions_on_callback_token_digest", unique: true
-    t.index ["feed_id", "protocol", "hub_url", "topic_url"], name: "index_active_upstream_push_subscriptions", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'active'::character varying, 'unsubscribing'::character varying])::text[]))"
+    t.index ["feed_id", "protocol", "hub_url", "topic_url"], name: "index_active_upstream_push_subscriptions", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('active'::character varying)::text, ('unsubscribing'::character varying)::text]))"
     t.index ["feed_id"], name: "index_upstream_push_subscriptions_on_feed_id"
     t.index ["status", "lease_expires_at"], name: "index_upstream_push_expirations"
     t.index ["status", "next_renew_at"], name: "index_upstream_push_renewals"
@@ -358,9 +401,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000006) do
   end
 
   add_foreign_key "audit_logs", "users", on_delete: :nullify
+  add_foreign_key "delivery_attempts", "downstream_subscriptions", on_delete: :cascade
+  add_foreign_key "delivery_attempts", "outbox_events", on_delete: :cascade
   add_foreign_key "document_revisions", "documents", on_delete: :cascade
   add_foreign_key "document_revisions", "users", column: "created_by_user_id", on_delete: :restrict
   add_foreign_key "documents", "publications", on_delete: :cascade
+  add_foreign_key "downstream_subscriptions", "publications", on_delete: :cascade
   add_foreign_key "feed_aliases", "feeds", on_delete: :cascade
   add_foreign_key "feed_item_revisions", "feed_items", on_delete: :cascade
   add_foreign_key "feed_items", "feeds", on_delete: :cascade
