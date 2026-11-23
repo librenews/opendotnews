@@ -1,0 +1,37 @@
+<div class="card">
+  <div class="row">
+    <h2>Your Markdown Documents (@<%= current_user.namespace %>)</h2>
+    <a class="btn" href="<%= new_document_path %>">New Document</a>
+  </div>
+  <p class="muted">
+    Public feeds:
+    <a href="<%= "#{OpenNews.config.app_base_url}/#{current_user.namespace}/feed.xml" %>">feed.xml (RSS)</a> &middot;
+    <a href="<%= "#{OpenNews.config.app_base_url}/#{current_user.namespace}/feed.atom" %>">feed.atom (Atom)</a>
+  </p>
+
+  <% if @documents.empty? %>
+    <p class="muted">No documents yet. Create one here or ask your connected AI agent to call <code>publish_document</code>.</p>
+  <% else %>
+    <ul class="list">
+      <% @documents.each do |doc| %>
+        <li>
+          <div class="row">
+            <div>
+              <strong><%= doc.title %></strong>
+              <span class="badge <%= doc.public? ? 'ok' : '' %>"><%= doc.visibility %></span>
+              <span class="muted"><code>/<%= doc.path %></code> &middot; rev <%= doc.current_revision_number %></span>
+            </div>
+            <div>
+              <% if doc.public? %>
+                <a href="<%= doc.canonical_url %>" class="muted" style="margin-right: 0.5rem;">View</a>
+                <a href="<%= doc.markdown_url %>" class="muted" style="margin-right: 0.5rem;">.md</a>
+              <% end %>
+              <a href="<%= edit_document_path(doc) %>" class="muted" style="margin-right: 0.5rem;">Edit</a>
+              <%= button_to "Delete", document_path(doc), method: :delete, class: "danger", form: { class: "inline-form" } %>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

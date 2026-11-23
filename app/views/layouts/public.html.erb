@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title><%= @document ? "#{@document.title} — @#{@owner.namespace}" : "@#{@owner.namespace} — Open.News" %></title>
+    <%= csp_meta_tag %>
+    <% if @document %>
+      <link rel="canonical" href="<%= @document.canonical_url %>">
+      <link rel="alternate" type="text/markdown" href="<%= @document.markdown_url %>">
+    <% end %>
+    <% if @rss_url %>
+      <link rel="alternate" type="application/rss+xml" title="<%= @publication.title %> (RSS)" href="<%= @rss_url %>">
+    <% end %>
+    <% if @atom_url %>
+      <link rel="alternate" type="application/atom+xml" title="<%= @publication.title %> (Atom)" href="<%= @atom_url %>">
+    <% end %>
+    <%= stylesheet_link_tag "application" %>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="<%= "#{OpenNews.config.app_base_url}/#{@owner.namespace}" %>">@<%= @owner.namespace %></a>
+      <nav>
+        <% if @rss_url %><a href="<%= @rss_url %>">RSS</a><% end %>
+        <% if @atom_url %><a href="<%= @atom_url %>">Atom</a><% end %>
+        <% if @document %><a href="<%= @document.markdown_url %>">Markdown</a><% end %>
+      </nav>
+    </header>
+    <main class="container">
+      <%= yield %>
+    </main>
+  </body>
+</html>

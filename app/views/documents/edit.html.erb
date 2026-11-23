@@ -1,0 +1,18 @@
+<div class="card">
+  <p class="muted"><a href="<%= documents_path %>">&larr; Back to documents</a></p>
+  <h2>Edit <code>/<%= @document.path %></code> (rev <%= @document.current_revision_number %>)</h2>
+  <%= form_with url: document_path(@document), method: :patch, local: true do |f| %>
+    <%= f.hidden_field :expected_revision, value: @document.current_revision_number %>
+
+    <label>Title</label>
+    <%= f.text_field :title, value: @document.title, required: true %>
+
+    <label>Visibility</label>
+    <%= f.select :visibility, [ [ "Draft (private)", "draft" ], [ "Public (visible on web & feeds)", "public" ] ], selected: @document.visibility %>
+
+    <label style="display:block; margin-top:0.6rem;">Markdown</label>
+    <%= f.text_area :markdown, value: @markdown, rows: 14, required: true %>
+
+    <%= f.submit "Update Document", class: "btn" %>
+  <% end %>
+</div>

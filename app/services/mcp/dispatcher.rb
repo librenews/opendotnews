@@ -13,7 +13,12 @@ module Mcp
       Mcp::Tools::GetUpdates,
       Mcp::Tools::ImportOpml,
       Mcp::Tools::GetOpmlImportStatus,
-      Mcp::Tools::ExportOpml
+      Mcp::Tools::ExportOpml,
+      Mcp::Tools::PublishDocument,
+      Mcp::Tools::GetDocument,
+      Mcp::Tools::UpdateDocument,
+      Mcp::Tools::ListDocuments,
+      Mcp::Tools::DeleteDocument
     ].freeze
 
     TOOLS_BY_NAME = TOOL_CLASSES.index_by(&:tool_name).freeze

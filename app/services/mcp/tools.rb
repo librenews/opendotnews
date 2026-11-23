@@ -441,5 +441,240 @@ module Mcp
         end
       end
     end
+
+    # --- Phase 3 Markdown Publishing Tools ---
+
+    module DocumentSerialization
+      protected
+
+      def serialize_document(doc, revision: nil, include_markdown: false)
+        rev = revision || doc.current_revision
+        out = {
+          document_id: doc.id,
+          path: doc.path,
+          title: doc.title,
+          visibility: doc.visibility,
+          revision: doc.current_revision_number,
+          rss_guid: doc.rss_guid,
+          content_sha256: doc.content_sha256,
+          published_at: doc.published_at&.iso8601,
+          updated_at: doc.updated_at&.iso8601,
+          public_url: doc.public? ? doc.canonical_url : nil,
+          markdown_url: doc.public? ? doc.markdown_url : nil,
+          rss_feed_url: "#{OpenNews.config.app_base_url}/#{doc.namespace}/feed.xml",
+          atom_feed_url: "#{OpenNews.config.app_base_url}/#{doc.namespace}/feed.atom"
+        }.compact
+
+        if include_markdown && rev
+          out[:viewed_revision] = rev.revision_number
+          out[:markdown] = rev.markdown
+        end
+        out
+      end
+    end
+
+    class PublishDocument < Base
+      include DocumentSerialization
+
+      def self.tool_name = "publish_document"
+      def self.required_scope = "documents:write"
+      def self.description = "Create a Markdown document in the user's namespace. Defaults to visibility='draft' (private). Setting visibility='public' publishes the Markdown and rendered HTML at a permanent public HTTPS URL and adds it to the user's public RSS and Atom feeds."
+      def self.input_schema
+        {
+          type: "object",
+          required: %w[path markdown],
+          properties: {
+            path: { type: "string", description: "Relative path under user's namespace, e.g. 'notes/hello' (must not end with .md)" },
+            markdown: { type: "string", description: "UTF-8 Markdown document content (max 256 KB)" },
+            title: { type: "string", description: "Optional explicit title" },
+            visibility: { type: "string", enum: %w[draft public], description: "Defaults to 'draft'; set 'public' only when user explicitly wants public web/feed publishing" },
+            idempotency_key: { type: "string", description: "Optional client idempotency key to prevent duplicate creation on retry" }
+          },
+          additionalProperties: false
+        }
+      end
+
+      def call(args)
+        res = Publishing::CreateOrRevise.create(
+          user: @user,
+          path: args["path"],
+          markdown: args["markdown"],
+          title: args["title"],
+          visibility: args["visibility"],
+          idempotency_key: args["idempotency_key"],
+          actor_type: "mcp",
+          scope: self.class.required_scope
+        )
+        serialize_document(res.document, revision: res.revision).merge(
+          status: res.idempotent_replay ? "idempotent_replay" : "created"
+        )
+      rescue Publishing::CreateOrRevise::PathConflictError => e
+        raise ToolError.new("path_conflict", e.message)
+      rescue Publishing::CreateOrRevise::PayloadTooLargeError => e
+        raise ToolError.new("payload_too_large", e.message)
+      rescue Publishing::CreateOrRevise::IdempotencyConflictError => e
+        raise ToolError.new("idempotency_conflict", e.message)
+      rescue Publishing::CreateOrRevise::InvalidInputError => e
+        raise ToolError.new("invalid_request", e.message)
+      end
+    end
+
+    class GetDocument < Base
+      include DocumentSerialization
+
+      def self.tool_name = "get_document"
+      def self.required_scope = "documents:read"
+      def self.description = "Read a caller-owned Markdown document (including drafts and optional specific revision number)."
+      def self.input_schema
+        {
+          type: "object",
+          required: %w[path],
+          properties: {
+            path: { type: "string" },
+            revision: { type: "integer", minimum: 1 }
+          },
+          additionalProperties: false
+        }
+      end
+
+      def call(args)
+        norm_path = Publishing::PathNormalizer.normalize!(args["path"])
+        doc = @user.default_publication.documents.live.find_by(path: norm_path)
+        raise ToolError.new("not_found", "Document '#{norm_path}' not found") unless doc
+
+        rev = args["revision"].present? ? doc.revision(args["revision"]) : doc.current_revision
+        raise ToolError.new("not_found", "Revision #{args['revision']} not found") unless rev
+
+        serialize_document(doc, revision: rev, include_markdown: true)
+      rescue Publishing::PathNormalizer::InvalidPathError => e
+        raise ToolError.new("invalid_request", e.message)
+      end
+    end
+
+    class UpdateDocument < Base
+      include DocumentSerialization
+
+      def self.tool_name = "update_document"
+      def self.required_scope = "documents:write"
+      def self.description = "Update a caller-owned Markdown document, creating a new revision when content changes. Pass expected_revision for optimistic locking; setting visibility='public' makes the document publicly readable on the web and in RSS/Atom feeds."
+      def self.input_schema
+        {
+          type: "object",
+          required: %w[path],
+          properties: {
+            path: { type: "string" },
+            markdown: { type: "string" },
+            title: { type: "string" },
+            visibility: { type: "string", enum: %w[draft public] },
+            expected_revision: { type: "integer", minimum: 1 },
+            idempotency_key: { type: "string" }
+          },
+          additionalProperties: false
+        }
+      end
+
+      def call(args)
+        res = Publishing::CreateOrRevise.update(
+          user: @user,
+          path: args["path"],
+          markdown: args.key?("markdown") ? args["markdown"] : nil,
+          title: args["title"],
+          visibility: args["visibility"],
+          expected_revision: args["expected_revision"],
+          idempotency_key: args["idempotency_key"],
+          actor_type: "mcp",
+          scope: self.class.required_scope
+        )
+        serialize_document(res.document, revision: res.revision).merge(
+          status: res.idempotent_replay ? "idempotent_replay" : "updated",
+          revised: res.revised
+        )
+      rescue Publishing::CreateOrRevise::NotFoundError => e
+        raise ToolError.new("not_found", e.message)
+      rescue Publishing::CreateOrRevise::RevisionConflictError => e
+        raise ToolError.new("revision_conflict", e.message, details: { current_revision: e.current_revision })
+      rescue Publishing::CreateOrRevise::PayloadTooLargeError => e
+        raise ToolError.new("payload_too_large", e.message)
+      rescue Publishing::CreateOrRevise::IdempotencyConflictError => e
+        raise ToolError.new("idempotency_conflict", e.message)
+      rescue Publishing::CreateOrRevise::InvalidInputError => e
+        raise ToolError.new("invalid_request", e.message)
+      end
+    end
+
+    class ListDocuments < Base
+      include DocumentSerialization
+
+      def self.tool_name = "list_documents"
+      def self.required_scope = "documents:read"
+      def self.description = "List caller-owned Markdown documents (drafts and/or public)."
+      def self.input_schema
+        {
+          type: "object",
+          properties: {
+            visibility: { type: "string", enum: %w[draft public] },
+            cursor: { type: "string" },
+            limit: { type: "integer", minimum: 1, maximum: 100 }
+          },
+          additionalProperties: false
+        }
+      end
+
+      def call(args)
+        limit = (args["limit"].nil? || args["limit"].to_i <= 0) ? 50 : args["limit"].to_i.clamp(1, 100)
+        offset = begin
+          args["cursor"].present? ? [ Integer(Base64.urlsafe_decode64(args["cursor"].to_s), 10), 0 ].max : 0
+        rescue ArgumentError
+          0
+        end
+
+        scope = @user.default_publication.documents.live.order(updated_at: :desc, id: :desc)
+        scope = scope.where(visibility: args["visibility"]) if %w[draft public].include?(args["visibility"])
+
+        rows = scope.offset(offset).limit(limit + 1).to_a
+        has_more = rows.size > limit
+        rows = rows.first(limit)
+
+        {
+          documents: rows.map { |d| serialize_document(d) },
+          next_cursor: has_more ? Base64.urlsafe_encode64((offset + limit).to_s, padding: false) : nil,
+          has_more: has_more
+        }
+      end
+    end
+
+    class DeleteDocument < Base
+      def self.tool_name = "delete_document"
+      def self.required_scope = "documents:write"
+      def self.description = "Soft-delete (tombstone) a caller-owned Markdown document. Removes it from public web/feed delivery and permanently reserves its URL."
+      def self.input_schema
+        {
+          type: "object",
+          required: %w[path],
+          properties: {
+            path: { type: "string" },
+            expected_revision: { type: "integer", minimum: 1 }
+          },
+          additionalProperties: false
+        }
+      end
+
+      def call(args)
+        res = Publishing::Delete.call(
+          user: @user,
+          path: args["path"],
+          expected_revision: args["expected_revision"],
+          actor_type: "mcp",
+          scope: self.class.required_scope
+        )
+        { status: "deleted", document_id: res.document.id, path: res.document.path }
+      rescue Publishing::CreateOrRevise::NotFoundError => e
+        raise ToolError.new("not_found", e.message)
+      rescue Publishing::CreateOrRevise::RevisionConflictError => e
+        raise ToolError.new("revision_conflict", e.message, details: { current_revision: e.current_revision })
+      rescue Publishing::CreateOrRevise::InvalidInputError => e
+        raise ToolError.new("invalid_request", e.message)
+      end
+    end
   end
 end

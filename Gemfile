@@ -19,6 +19,9 @@ gem "doorkeeper", "~> 5.7"
 gem "nokogiri", "~> 1.18"
 gem "loofah", "~> 2.24"
 
+# Safe CommonMark/GFM Markdown rendering (raw HTML disabled by default)
+gem "commonmarker", "~> 2.3"
+
 # Rate limiting & abuse protection
 gem "rack-attack", "~> 6.7"
 

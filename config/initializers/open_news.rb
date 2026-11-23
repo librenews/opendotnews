@@ -8,6 +8,7 @@ module OpenNews
     :feed_max_redirects,
     :opml_max_bytes,
     :opml_max_feeds,
+    :document_max_bytes,
     :inbox_retention_days,
     :user_agent,
     :allow_private_http_fetch
@@ -23,6 +24,7 @@ module OpenNews
       feed_max_redirects: ENV.fetch("FEED_MAX_REDIRECTS", "5").to_i,
       opml_max_bytes: ENV.fetch("OPML_MAX_BYTES", (2 * 1024 * 1024).to_s).to_i,
       opml_max_feeds: ENV.fetch("OPML_MAX_FEEDS", "2000").to_i,
+      document_max_bytes: ENV.fetch("DOCUMENT_MAX_BYTES", (256 * 1024).to_s).to_i,
       inbox_retention_days: ENV.fetch("INBOX_RETENTION_DAYS", "90").to_i,
       user_agent: ENV.fetch("OPEN_NEWS_USER_AGENT", "OpenNews/1.0 (+https://open.news)"),
       allow_private_http_fetch: ENV["ALLOW_PRIVATE_HTTP_FETCH"] == "true"

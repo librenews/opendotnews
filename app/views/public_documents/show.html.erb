@@ -1,0 +1,13 @@
+<article class="card">
+  <h1><%= @document.title %></h1>
+  <p class="muted">
+    By <strong>@<%= @owner.namespace %></strong>
+    &middot; Published <%= (@document.published_at || @document.created_at).strftime("%Y-%m-%d %H:%M UTC") %>
+    &middot; Revision <%= @revision.revision_number %>
+    &middot; <a href="<%= @document.markdown_url %>">Raw Markdown</a>
+  </p>
+  <hr>
+  <div>
+    <%= sanitize(@rendered_html) %>
+  </div>
+</article>

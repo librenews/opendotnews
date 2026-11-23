@@ -34,6 +34,7 @@ Rails.application.routes.draw do
   delete "/logout", to: "sessions#destroy", as: :logout
 
   resources :subscriptions, only: [ :create, :destroy ]
+  resources :documents, only: [ :index, :new, :create, :edit, :update, :destroy ]
   get "/feeds/:id", to: "feeds#show", as: :feed_diagnostics
   get "/items/:id", to: "items#show", as: :feed_item
   patch "/items/:id/state", to: "items#update_state", as: :update_feed_item_state
@@ -43,4 +44,11 @@ Rails.application.routes.draw do
 
   get "/settings/connections", to: "oauth_connections#index", as: :oauth_connections
   delete "/settings/connections/:id", to: "oauth_connections#destroy", as: :revoke_oauth_connection
+
+  # Public hosted publication, feeds, and Markdown/HTML documents (must remain last)
+  namespace_constraint = /[a-zA-Z0-9][a-zA-Z0-9_-]{1,30}[a-zA-Z0-9]/
+  get "/:namespace/feed.xml", to: "public_documents#rss", format: false, constraints: { namespace: namespace_constraint }, as: :public_rss_feed
+  get "/:namespace/feed.atom", to: "public_documents#atom", format: false, constraints: { namespace: namespace_constraint }, as: :public_atom_feed
+  get "/:namespace", to: "public_documents#publication", format: false, constraints: { namespace: namespace_constraint }, as: :public_publication
+  get "/:namespace/*path", to: "public_documents#show", format: false, constraints: { namespace: namespace_constraint }, as: :public_document
 end

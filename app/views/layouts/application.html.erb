@@ -15,6 +15,7 @@
         <% if signed_in? %>
           <span class="muted">@<%= current_user.namespace %></span>
           <a href="<%= dashboard_path %>">Feeds</a>
+          <a href="<%= documents_path %>">Documents</a>
           <a href="<%= export_opml_path %>">Export OPML</a>
           <a href="<%= oauth_connections_path %>">Agent Connections</a>
           <%= button_to "Sign out", logout_path, method: :delete, class: "secondary", form: { class: "inline-form" } %>

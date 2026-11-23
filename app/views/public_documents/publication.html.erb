@@ -1,0 +1,21 @@
+<div class="card">
+  <h1><%= @publication.title.presence || "@#{@owner.namespace}" %></h1>
+  <% if @publication.description.present? %>
+    <p class="muted"><%= @publication.description %></p>
+  <% end %>
+  <p class="muted">
+    Subscribe: <a href="<%= @rss_url %>">RSS 2.0</a> &middot; <a href="<%= @atom_url %>">Atom 1.0</a>
+  </p>
+  <% if @documents.empty? %>
+    <p class="muted">No public documents published yet.</p>
+  <% else %>
+    <ul class="list">
+      <% @documents.each do |doc| %>
+        <li class="row">
+          <a href="<%= doc.canonical_url %>"><strong><%= doc.title %></strong></a>
+          <span class="muted"><%= (doc.published_at || doc.created_at).strftime("%Y-%m-%d") %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

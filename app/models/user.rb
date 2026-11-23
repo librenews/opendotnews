@@ -1,8 +1,9 @@
 class User < ApplicationRecord
   RESERVED_NAMESPACES = %w[
-    admin api assets auth callbacks dashboard feed health login logout mcp
-    oauth opendotnews opennews rails rsscloud settings sidekiq signup system
-    up websub well-known www root internal metrics status
+    admin api assets auth callbacks dashboard documents feed feeds health items
+    login logout mcp oauth opendotnews opennews opml rails rsscloud settings
+    sidekiq signup subscriptions system up websub well-known www root internal
+    metrics status
   ].freeze
 
   NAMESPACE_FORMAT = /\A[a-z0-9][a-z0-9_-]{1,30}[a-z0-9]\z/
