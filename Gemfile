@@ -26,7 +26,7 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 
 group :development, :test do
   gem "dotenv-rails", "~> 3.1"
-  gem "rspec-rails", "~> 7.1"
+  gem "rspec-rails", "~> 8.1"
   gem "factory_bot_rails", "~> 6.4"
   gem "webmock", "~> 3.24"
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
