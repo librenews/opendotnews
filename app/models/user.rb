@@ -14,6 +14,7 @@ class User < ApplicationRecord
   has_many :user_feed_subscriptions, dependent: :destroy
   has_many :active_subscriptions, -> { active }, class_name: "UserFeedSubscription"
   has_many :feeds, through: :active_subscriptions
+  has_many :user_items, dependent: :destroy
   has_many :user_inbox_events, dependent: :destroy
   has_many :opml_imports, dependent: :destroy
   has_many :idempotency_keys, dependent: :destroy

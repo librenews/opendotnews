@@ -28,7 +28,9 @@ Rails.application.routes.draw do
   delete "/logout", to: "sessions#destroy", as: :logout
 
   resources :subscriptions, only: [ :create, :destroy ]
+  get "/feeds/:id", to: "feeds#show", as: :feed_diagnostics
   get "/items/:id", to: "items#show", as: :feed_item
+  patch "/items/:id/state", to: "items#update_state", as: :update_feed_item_state
 
   post "/opml/import", to: "opml#import", as: :import_opml
   get "/opml/export", to: "opml#export", as: :export_opml

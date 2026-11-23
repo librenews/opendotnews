@@ -10,6 +10,23 @@
       &middot; <a href="<%= @item.external_url %>" target="_blank" rel="noopener noreferrer">Original article</a>
     <% end %>
   </p>
+
+  <div style="margin: 0.75rem 0; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    <% is_read = @user_item&.read? == true %>
+    <% is_saved = @user_item&.saved? == true %>
+    <% is_archived = @user_item&.archived? == true %>
+
+    <%= button_to(is_read ? "Mark unread" : "Mark read",
+      update_feed_item_state_path(@item, read: !is_read),
+      method: :patch, class: "secondary", form: { class: "inline-form" }) %>
+    <%= button_to(is_saved ? "Unsave" : "Save",
+      update_feed_item_state_path(@item, saved: !is_saved),
+      method: :patch, class: is_saved ? "btn" : "secondary", form: { class: "inline-form" }) %>
+    <%= button_to(is_archived ? "Unarchive" : "Archive",
+      update_feed_item_state_path(@item, archived: !is_archived),
+      method: :patch, class: "secondary", form: { class: "inline-form" }) %>
+  </div>
+
   <hr>
   <div>
     <% if @item.content_html_sanitized.present? %>

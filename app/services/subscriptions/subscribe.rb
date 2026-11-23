@@ -76,7 +76,9 @@ module Subscriptions
           parsed_feed: disc.parsed_feed,
           raw_body: disc.response.body,
           etag: disc.response.etag,
-          last_modified: disc.response.last_modified
+          last_modified: disc.response.last_modified,
+          ingestion_method: "discover",
+          http_status: disc.response.status
         )
         feed.reload
         feed.update!(next_fetch_at: Feeds::Schedule.next_fetch_time(feed: feed, response: disc.response, failed: false))

@@ -8,7 +8,19 @@ module Search
 
     Result = Data.define(:items, :next_cursor, :has_more)
 
-    def self.call(user:, query:, feed_id: nil, since: nil, until_time: nil, sort: "relevance", limit: DEFAULT_LIMIT, cursor: nil)
+    def self.call(
+      user:,
+      query:,
+      feed_id: nil,
+      since: nil,
+      until_time: nil,
+      sort: "relevance",
+      limit: DEFAULT_LIMIT,
+      cursor: nil,
+      unread_only: false,
+      saved_only: false,
+      exclude_archived: false
+    )
       new(
         user: user,
         query: query,
@@ -17,11 +29,26 @@ module Search
         until_time: until_time,
         sort: sort,
         limit: limit,
-        cursor: cursor
+        cursor: cursor,
+        unread_only: unread_only,
+        saved_only: saved_only,
+        exclude_archived: exclude_archived
       ).call
     end
 
-    def initialize(user:, query:, feed_id: nil, since: nil, until_time: nil, sort: "relevance", limit: DEFAULT_LIMIT, cursor: nil)
+    def initialize(
+      user:,
+      query:,
+      feed_id: nil,
+      since: nil,
+      until_time: nil,
+      sort: "relevance",
+      limit: DEFAULT_LIMIT,
+      cursor: nil,
+      unread_only: false,
+      saved_only: false,
+      exclude_archived: false
+    )
       @user = user
       @query = query.to_s.strip.truncate(MAX_QUERY_LENGTH, omission: "")
       @feed_id = feed_id.presence
@@ -30,6 +57,9 @@ module Search
       @sort = %w[relevance newest].include?(sort.to_s) ? sort.to_s : "relevance"
       @limit = (limit.nil? || limit.to_i <= 0) ? DEFAULT_LIMIT : limit.to_i.clamp(1, MAX_LIMIT)
       @offset = decode_cursor(cursor)
+      @unread_only = ActiveModel::Type::Boolean.new.cast(unread_only)
+      @saved_only = ActiveModel::Type::Boolean.new.cast(saved_only)
+      @exclude_archived = ActiveModel::Type::Boolean.new.cast(exclude_archived)
     end
 
     def call
@@ -43,6 +73,17 @@ module Search
       scope = scope.where(feed_id: @feed_id) if @feed_id
       scope = scope.where("COALESCE(feed_items.published_at, feed_items.first_seen_at) >= ?", @since) if @since
       scope = scope.where("COALESCE(feed_items.published_at, feed_items.first_seen_at) <= ?", @until_time) if @until_time
+
+      if @unread_only || @saved_only || @exclude_archived
+        join_sql = ActiveRecord::Base.sanitize_sql_array([
+          "LEFT OUTER JOIN user_items ON user_items.feed_item_id = feed_items.id AND user_items.user_id = ?",
+          @user.id
+        ])
+        scope = scope.joins(join_sql)
+        scope = scope.where("user_items.read_at IS NULL") if @unread_only
+        scope = scope.where("user_items.saved_at IS NOT NULL") if @saved_only
+        scope = scope.where("user_items.archived_at IS NULL") if @exclude_archived
+      end
 
       tsq = ActiveRecord::Base.sanitize_sql_array([ "websearch_to_tsquery('english', ?)", @query ])
       scope = scope.where("feed_items.search_vector @@ #{tsq}")

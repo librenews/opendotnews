@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_000004) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -96,7 +96,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000004) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.virtual "search_vector", type: :tsvector, as: "((setweight(to_tsvector('english'::regconfig, (COALESCE(title, ''::character varying))::text), 'A'::\"char\") || setweight(to_tsvector('english'::regconfig, COALESCE(summary_text, ''::text)), 'B'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(content_text, ''::text)), 'C'::\"char\"))", stored: true
+    t.jsonb "metadata", default: {}, null: false
     t.index ["feed_id", "external_id"], name: "index_feed_items_on_feed_id_and_external_id", unique: true
+    t.index ["feed_id", "external_url"], name: "index_feed_items_on_feed_id_and_external_url", where: "(external_url IS NOT NULL)"
     t.index ["feed_id", "first_seen_at"], name: "index_feed_items_on_feed_id_and_first_seen_at", order: { first_seen_at: :desc }
     t.index ["feed_id", "published_at"], name: "index_feed_items_on_feed_id_and_published_at", order: { published_at: :desc }
     t.index ["feed_id"], name: "index_feed_items_on_feed_id"
@@ -125,7 +127,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000004) do
     t.string "discovered_rsscloud_protocol"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source_type", default: "feed", null: false
+    t.jsonb "source_metadata", default: {}, null: false
+    t.datetime "last_successful_fetch_at"
+    t.integer "last_http_status"
+    t.integer "last_fetch_duration_ms"
+    t.datetime "last_error_at"
+    t.string "last_ingestion_method"
+    t.jsonb "last_diagnostics", default: {}, null: false
     t.index ["canonical_url"], name: "index_feeds_on_canonical_url", unique: true
+    t.index ["source_type"], name: "index_feeds_on_source_type"
     t.index ["status", "next_fetch_at"], name: "index_feeds_on_status_and_next_fetch_at"
   end
 
@@ -271,6 +282,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000004) do
     t.index ["user_id"], name: "index_user_inbox_events_on_user_id"
   end
 
+  create_table "user_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.uuid "feed_item_id", null: false
+    t.datetime "read_at"
+    t.datetime "saved_at"
+    t.datetime "archived_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["feed_item_id"], name: "index_user_items_on_feed_item_id"
+    t.index ["user_id", "archived_at"], name: "index_user_items_on_user_archived", where: "(archived_at IS NOT NULL)"
+    t.index ["user_id", "feed_item_id"], name: "index_user_items_on_user_id_and_feed_item_id", unique: true
+    t.index ["user_id", "read_at"], name: "index_user_items_on_user_read", where: "(read_at IS NOT NULL)"
+    t.index ["user_id", "saved_at"], name: "index_user_items_on_user_saved", where: "(saved_at IS NOT NULL)"
+    t.index ["user_id"], name: "index_user_items_on_user_id"
+  end
+
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "email", null: false
     t.string "password_digest", null: false
@@ -303,4 +331,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000004) do
   add_foreign_key "user_inbox_events", "feed_items", on_delete: :nullify
   add_foreign_key "user_inbox_events", "feeds", on_delete: :nullify
   add_foreign_key "user_inbox_events", "users", on_delete: :cascade
+  add_foreign_key "user_items", "feed_items", on_delete: :cascade
+  add_foreign_key "user_items", "users", on_delete: :cascade
 end

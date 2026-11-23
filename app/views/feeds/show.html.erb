@@ -1,0 +1,36 @@
+<div class="card">
+  <p class="muted"><a href="<%= dashboard_path %>">&larr; Back to dashboard</a></p>
+  <h2><%= @feed.title.presence || @feed.canonical_url %></h2>
+  <p class="muted">
+    Canonical URL: <code><%= @feed.canonical_url %></code><br>
+    Source type: <span class="badge"><%= @feed.source_type %></span>
+    &middot; Format: <span class="badge"><%= @feed.format || "unknown" %></span>
+    &middot; Status: <span class="badge <%= @feed.status == 'error' ? 'error' : 'ok' %>"><%= @feed.status %></span>
+    &middot; Archived items: <strong><%= @item_count %></strong>
+  </p>
+
+  <h3>Ingestion &amp; Fetch Diagnostics</h3>
+  <ul class="list">
+    <li><strong>Last fetch attempt:</strong> <%= @feed.last_fetched_at&.iso8601 || "never" %></li>
+    <li><strong>Last successful ingestion:</strong> <%= @feed.last_successful_fetch_at&.iso8601 || "never" %></li>
+    <li><strong>Last content change:</strong> <%= @feed.last_changed_at&.iso8601 || "never" %></li>
+    <li><strong>Next scheduled poll:</strong> <%= @feed.next_fetch_at&.iso8601 || "immediate" %></li>
+    <li><strong>Last HTTP status / duration:</strong> <%= @feed.last_http_status || "n/a" %> (<%= @feed.last_fetch_duration_ms || 0 %> ms) via <code><%= @feed.last_ingestion_method || "n/a" %></code></li>
+    <li><strong>Consecutive failures:</strong> <%= @feed.fetch_failure_count %><% if @feed.last_error_at %> (last error at <%= @feed.last_error_at.iso8601 %>)<% end %></li>
+    <% if @feed.last_error.present? %>
+      <li style="color: var(--danger);"><strong>Last error:</strong> <%= @feed.last_error %></li>
+    <% end %>
+  </ul>
+
+  <h3>Real-Time Protocol Discovery (Phase 2 Readiness)</h3>
+  <ul class="list">
+    <li><strong>WebSub Hub:</strong> <code><%= @feed.discovered_websub_hub.presence || "none advertised" %></code></li>
+    <li><strong>WebSub Topic:</strong> <code><%= @feed.discovered_websub_topic.presence || "none advertised" %></code></li>
+    <li><strong>rssCloud Endpoint:</strong> <code><%= @feed.discovered_rsscloud_endpoint.presence || "none advertised" %></code> (<%= @feed.discovered_rsscloud_protocol.presence || "n/a" %>)</li>
+  </ul>
+
+  <% if @feed.last_diagnostics.present? %>
+    <h3>Last Diagnostics Snapshot</h3>
+    <pre style="background: #f5f6f8; padding: 0.75rem; border-radius: 6px; overflow-x: auto;"><%= JSON.pretty_generate(@feed.last_diagnostics) %></pre>
+  <% end %>
+</div>

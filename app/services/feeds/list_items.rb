@@ -7,17 +7,50 @@ module Feeds
 
     Result = Data.define(:items, :next_cursor, :has_more)
 
-    def self.call(user:, feed_id: nil, since: nil, until_time: nil, cursor: nil, limit: DEFAULT_LIMIT)
-      new(user: user, feed_id: feed_id, since: since, until_time: until_time, cursor: cursor, limit: limit).call
+    def self.call(
+      user:,
+      feed_id: nil,
+      since: nil,
+      until_time: nil,
+      cursor: nil,
+      limit: DEFAULT_LIMIT,
+      unread_only: false,
+      saved_only: false,
+      exclude_archived: false
+    )
+      new(
+        user: user,
+        feed_id: feed_id,
+        since: since,
+        until_time: until_time,
+        cursor: cursor,
+        limit: limit,
+        unread_only: unread_only,
+        saved_only: saved_only,
+        exclude_archived: exclude_archived
+      ).call
     end
 
-    def initialize(user:, feed_id: nil, since: nil, until_time: nil, cursor: nil, limit: DEFAULT_LIMIT)
+    def initialize(
+      user:,
+      feed_id: nil,
+      since: nil,
+      until_time: nil,
+      cursor: nil,
+      limit: DEFAULT_LIMIT,
+      unread_only: false,
+      saved_only: false,
+      exclude_archived: false
+    )
       @user = user
       @feed_id = feed_id.presence
       @since = parse_time(since)
       @until_time = parse_time(until_time)
       @offset = decode_cursor(cursor)
       @limit = (limit.nil? || limit.to_i <= 0) ? DEFAULT_LIMIT : limit.to_i.clamp(1, MAX_LIMIT)
+      @unread_only = ActiveModel::Type::Boolean.new.cast(unread_only)
+      @saved_only = ActiveModel::Type::Boolean.new.cast(saved_only)
+      @exclude_archived = ActiveModel::Type::Boolean.new.cast(exclude_archived)
     end
 
     def call
@@ -26,6 +59,18 @@ module Feeds
       scope = scope.where(feed_id: @feed_id) if @feed_id
       scope = scope.where("COALESCE(feed_items.published_at, feed_items.first_seen_at) >= ?", @since) if @since
       scope = scope.where("COALESCE(feed_items.published_at, feed_items.first_seen_at) <= ?", @until_time) if @until_time
+
+      if @unread_only || @saved_only || @exclude_archived
+        join_sql = ActiveRecord::Base.sanitize_sql_array([
+          "LEFT OUTER JOIN user_items ON user_items.feed_item_id = feed_items.id AND user_items.user_id = ?",
+          @user.id
+        ])
+        scope = scope.joins(join_sql)
+        scope = scope.where("user_items.read_at IS NULL") if @unread_only
+        scope = scope.where("user_items.saved_at IS NOT NULL") if @saved_only
+        scope = scope.where("user_items.archived_at IS NULL") if @exclude_archived
+      end
+
       scope = scope.recent_first
 
       rows = scope.offset(@offset).limit(@limit + 1).to_a

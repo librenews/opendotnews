@@ -52,6 +52,7 @@
                 <div class="muted" style="color: var(--danger);"><%= sub.feed.last_error.truncate(120) %></div>
               <% end %>
               <div style="margin-top: 0.3rem;">
+                <a href="<%= feed_diagnostics_path(sub.feed_id) %>" class="muted" style="margin-right: 0.5rem;">diagnostics</a>
                 <%= button_to "Unsubscribe", subscription_path(sub.feed_id), method: :delete, class: "secondary", form: { class: "inline-form" } %>
               </div>
             </li>

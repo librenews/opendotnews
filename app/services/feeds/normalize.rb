@@ -7,18 +7,8 @@ module Feeds
     MAX_SUMMARY_LENGTH = 4_000
     DANGEROUS_SCHEMES = /\A\s*(javascript|vbscript|data):/i
 
-    NormalizedItem = Data.define(
-      :external_id,
-      :external_url,
-      :title,
-      :author,
-      :summary_text,
-      :content_html_sanitized,
-      :content_text,
-      :published_at,
-      :source_updated_at,
-      :content_hash
-    )
+    # Keep backwards-compatible constant alias to canonical Sources::NormalizedItem.
+    NormalizedItem = Sources::NormalizedItem
 
     def self.call(parsed_feed, feed_url:)
       new(parsed_feed, feed_url: feed_url).call

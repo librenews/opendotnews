@@ -1,6 +1,7 @@
 class FeedItem < ApplicationRecord
   belongs_to :feed
   has_many :feed_item_revisions, dependent: :destroy
+  has_many :user_items, dependent: :destroy
 
   validates :external_id, presence: true, uniqueness: { scope: :feed_id }
   validates :content_hash, presence: true

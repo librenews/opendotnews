@@ -49,15 +49,21 @@ module Mcp
       def serialize_feed(feed)
         {
           feed_id: feed.id,
+          source_type: feed.source_type,
           canonical_url: feed.canonical_url,
           site_url: feed.site_url,
           title: feed.title,
           format: feed.format,
           status: feed.status,
           last_fetched_at: feed.last_fetched_at&.iso8601,
+          last_successful_fetch_at: feed.last_successful_fetch_at&.iso8601,
           last_changed_at: feed.last_changed_at&.iso8601,
+          last_http_status: feed.last_http_status,
+          last_ingestion_method: feed.last_ingestion_method,
           fetch_failure_count: feed.fetch_failure_count,
-          last_error: feed.last_error
+          last_error: feed.last_error,
+          websub_hub: feed.discovered_websub_hub,
+          rsscloud_endpoint: feed.discovered_rsscloud_endpoint
         }.compact
       end
 
@@ -258,10 +264,14 @@ module Mcp
         item = FeedItem.visible.includes(:feed).where(feed_id: authorized_feed_ids).find_by(id: item_id)
         raise ToolError.new("not_found", "Feed item not found or not accessible") unless item
 
+        user_item = UserItem.find_by(user_id: @user.id, feed_item_id: item.id)
+        user_state = user_item ? user_item.state_hash : { read: false, saved: false, archived: false }
+
         serialize_item_summary(item).merge(
           external_id: item.external_id,
           feed_url: item.feed&.canonical_url,
           source_updated_at: item.source_updated_at&.iso8601,
+          user_state: user_state,
           content_text: item.content_text.to_s.truncate(20_000),
           content_html_sanitized: item.content_html_sanitized.to_s.truncate(20_000)
         ).compact

@@ -1,5 +1,6 @@
 class Feed < ApplicationRecord
   STATUSES = %w[active paused error].freeze
+  SOURCE_TYPES = %w[feed web browser].freeze
 
   has_many :feed_aliases, dependent: :destroy
   has_many :feed_items, dependent: :destroy
@@ -9,6 +10,7 @@ class Feed < ApplicationRecord
 
   validates :canonical_url, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
+  validates :source_type, inclusion: { in: SOURCE_TYPES }
 
   scope :due_for_fetch, ->(now = Time.current) {
     where(status: %w[active error])
