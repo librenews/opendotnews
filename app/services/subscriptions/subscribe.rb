@@ -104,6 +104,8 @@ module Subscriptions
         error_code: nil,
         error: nil
       )
+    rescue Security::Quotas::QuotaExceededError => e
+      error_result("quota_exceeded", e.message)
     end
 
     private
@@ -152,6 +154,8 @@ module Subscriptions
         existing.update!(folder_name: @folder) if @folder.present? && existing.folder_name != @folder
         return [ existing, true ]
       end
+
+      Security::Quotas.check_subscription_quota!(@user)
 
       sub = UserFeedSubscription.create!(
         user: @user,

@@ -24,3 +24,17 @@
     </ul>
   <% end %>
 </div>
+
+<div class="card">
+  <h3>Erase Account &amp; Private Data</h3>
+  <p class="muted">
+    Permanently deletes your subscriptions, reading state, inbox history, drafts, and OAuth tokens.
+    Previously published URLs become permanent <code>410 Gone</code> tombstones and your namespace remains reserved so it cannot be impersonated.
+  </p>
+  <%= form_with url: erase_account_path, method: :delete, local: true do %>
+    <div class="row">
+      <input type="password" name="password" placeholder="Confirm your current password" required>
+      <button type="submit" class="danger">Erase My Account</button>
+    </div>
+  <% end %>
+</div>

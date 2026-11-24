@@ -11,7 +11,16 @@ module OpenNews
     :document_max_bytes,
     :inbox_retention_days,
     :user_agent,
-    :allow_private_http_fetch
+    :allow_private_http_fetch,
+    :max_subscriptions_per_user,
+    :max_documents_per_user,
+    :max_document_storage_bytes_per_user,
+    :max_publishes_per_hour,
+    :max_downstream_subscribers_per_publication,
+    :max_downstream_fanout_per_event,
+    :abuse_contact_email,
+    :operator_emails,
+    :operator_metrics_token
   )
 
   def self.config
@@ -27,7 +36,16 @@ module OpenNews
       document_max_bytes: ENV.fetch("DOCUMENT_MAX_BYTES", (256 * 1024).to_s).to_i,
       inbox_retention_days: ENV.fetch("INBOX_RETENTION_DAYS", "90").to_i,
       user_agent: ENV.fetch("OPEN_NEWS_USER_AGENT", "OpenNews/1.0 (+https://open.news)"),
-      allow_private_http_fetch: ENV["ALLOW_PRIVATE_HTTP_FETCH"] == "true"
+      allow_private_http_fetch: ENV["ALLOW_PRIVATE_HTTP_FETCH"] == "true",
+      max_subscriptions_per_user: ENV.fetch("MAX_SUBSCRIPTIONS_PER_USER", "500").to_i,
+      max_documents_per_user: ENV.fetch("MAX_DOCUMENTS_PER_USER", "500").to_i,
+      max_document_storage_bytes_per_user: ENV.fetch("MAX_DOCUMENT_STORAGE_BYTES_PER_USER", (50 * 1024 * 1024).to_s).to_i,
+      max_publishes_per_hour: ENV.fetch("MAX_PUBLISHES_PER_HOUR", "60").to_i,
+      max_downstream_subscribers_per_publication: ENV.fetch("MAX_DOWNSTREAM_SUBSCRIBERS_PER_PUBLICATION", "500").to_i,
+      max_downstream_fanout_per_event: ENV.fetch("MAX_DOWNSTREAM_FANOUT_PER_EVENT", "500").to_i,
+      abuse_contact_email: ENV.fetch("ABUSE_CONTACT_EMAIL", "abuse@open.news"),
+      operator_emails: ENV.fetch("OPERATOR_EMAILS", "").split(",").map { |e| e.strip.downcase }.reject(&:blank?).freeze,
+      operator_metrics_token: ENV.fetch("OPERATOR_METRICS_TOKEN", "").strip
     )
   end
 

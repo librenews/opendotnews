@@ -17,7 +17,11 @@ module Events
 
       enqueued = 0
 
-      DownstreamSubscription.deliverable.where(publication_id: publication_id).find_each do |sub|
+      fanout_limit = OpenNews.config.max_downstream_fanout_per_event
+      scope = DownstreamSubscription.deliverable.where(publication_id: publication_id).order(created_at: :asc)
+      scope = scope.limit(fanout_limit) if fanout_limit > 0
+
+      scope.each do |sub|
         next if DeliveryAttempt.exists?(downstream_subscription_id: sub.id, outbox_event_id: event.id, attempt_number: 1)
 
         begin

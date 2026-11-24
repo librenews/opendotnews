@@ -2,7 +2,7 @@
 
 **Open.News** is an open-source, self-hostable, agent-native RSS/Atom subscription, archive, search, and Markdown publishing service built as a Rails 8 monolith with PostgreSQL and Sidekiq/Redis.
 
-## Current Status — Phases 0, 1, 1.1, 2, 3 & 4 Complete
+## Current Status — v1.0 Complete (Phases 0, 1, 1.1, 2, 3, 4 & 5)
 
 - **Foundation (Phase 0):** Rails 8 + PostgreSQL 17 (UUID PKs, generated weighted `tsvector` GIN full-text search, monotonic bigint inbox cursors), Sidekiq + `sidekiq-cron` + Redis, `Security::SafeHttpFetch` (manual DNS resolution + CIDR blocking + `Net::HTTP#ipaddr=` pinning, bounded redirects, gzip/deflate decompression caps), transactional outbox (`FOR UPDATE SKIP LOCKED` + `after_commit` trigger + sweeper), `/health/live` & `/health/ready`.
 - **Agent-Native Feed Reader & Shared Content Core (Phase 1 & 1.1):**
@@ -25,9 +25,17 @@
   - **WebSub Hub** (`POST /websub/hub`) restricted strictly to public hosted `/:namespace/feed.xml` and `/:namespace/feed.atom` feeds, with GET challenge verification, finite clamped leases, encrypted subscriber secrets, SSRF-safe delivery, and fat-push full XML + `X-Hub-Signature: sha256=...` HMAC + `Link` headers.
   - **rssCloud Cloud Server** (`POST /rsscloud/pleaseNotify`, `POST /rsscloud/RPC2`, guarded `POST /rsscloud/ping`) supporting REST (`http-post`) and XML-RPC registrations with challenge verification, 25-hour finite leases, XXE rejection, and lightweight feed-URL ping fanout.
   - Transactional outbox fanout (`publication.feed_changed` -> `Events::PublicationFanout`), explicit `DeliveryAttempt` tracking, exponential retry backoff (`Delivery::RetryDueJob`), automatic `410 Gone` unsubscription, periodic lease expiry (`Maintenance::ExpireLeasesJob`), and an owner delivery dashboard at `/publishing/deliveries`.
-  - See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture overview.
+- **Hardening, Operations & Release Readiness (Phase 5):**
+  - Env-driven per-account quotas (`Security::Quotas`: subscriptions, live documents, storage bytes, hourly publish rate, downstream subscribers, fanout caps).
+  - Strict Content-Security-Policy (`script-src 'none'`), security headers, `public/robots.txt`, and RFC 9116 `/.well-known/security.txt`.
+  - Operator metrics snapshot & moderation dashboard at `/admin/metrics` (HTML + token-scrapable JSON), document takedown (`451`), user disabling, and self-service account erasure (`DELETE /settings/account`).
 
-*(Phase 5 will add operational quotas, operator metrics, security hardening, and final production conformance.)*
+### Documentation
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [MCP & OAuth 2.1 API Reference](docs/MCP_API.md)
+- [Protocol Interoperability & Troubleshooting (WebSub / rssCloud / Markdown)](docs/PROTOCOLS.md)
+- [Security Model & Hardening](docs/SECURITY.md)
+- [Production Deployment, Backups & Restore Drills (Kamal 2 + Docker)](docs/DEPLOYMENT.md)
 
 ## Local Setup (macOS / Homebrew Postgres 17 + Redis + rbenv)
 

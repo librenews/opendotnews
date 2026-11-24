@@ -1,1 +1,21 @@
-# See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
+# Open.News robots.txt
+# Public author publications (/:namespace, /:namespace/feed.xml, /:namespace/feed.atom, /:namespace/*path)
+# are crawlable; private reader/agent/protocol endpoints are disallowed.
+User-agent: *
+Disallow: /admin
+Disallow: /callbacks/
+Disallow: /dashboard
+Disallow: /documents
+Disallow: /feeds/
+Disallow: /health/
+Disallow: /items/
+Disallow: /login
+Disallow: /mcp
+Disallow: /oauth/
+Disallow: /opml/
+Disallow: /publishing/
+Disallow: /rsscloud/
+Disallow: /settings/
+Disallow: /signup
+Disallow: /subscriptions
+Disallow: /websub/

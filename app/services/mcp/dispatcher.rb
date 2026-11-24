@@ -84,7 +84,7 @@ module Mcp
         },
         serverInfo: {
           name: "Open.News",
-          version: "1.0.0-phase1"
+          version: "1.0.0"
         }
       }
     end

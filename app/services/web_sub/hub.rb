@@ -79,6 +79,8 @@ module WebSub
       end
 
       Result.new(status: :ok, subscription: sub, http_status: 202, error: nil)
+    rescue Security::Quotas::QuotaExceededError => e
+      Result.new(status: :too_many_requests, subscription: nil, http_status: 429, error: e.message)
     end
 
     # W3C WebSub Section 5.3 — Hub verifies subscriber intent via GET challenge before activation.
@@ -190,6 +192,7 @@ module WebSub
         )
         existing
       else
+        Security::Quotas.check_downstream_subscriber_quota!(resolved.publication)
         DownstreamSubscription.create!(
           publication: resolved.publication,
           protocol: "websub",

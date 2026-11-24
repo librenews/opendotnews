@@ -18,6 +18,9 @@
           <a href="<%= documents_path %>">Documents</a>
           <a href="<%= export_opml_path %>">Export OPML</a>
           <a href="<%= oauth_connections_path %>">Agent Connections</a>
+          <% if current_user.operator? %>
+            <a href="<%= admin_metrics_path %>">Admin</a>
+          <% end %>
           <%= button_to "Sign out", logout_path, method: :delete, class: "secondary", form: { class: "inline-form" } %>
         <% else %>
           <a href="<%= login_path %>">Sign in</a>

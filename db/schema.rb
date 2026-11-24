@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_000007) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_000008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -69,6 +69,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000007) do
     t.string "content_sha256", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "moderated_at"
+    t.text "moderation_reason"
+    t.index ["moderated_at"], name: "index_documents_on_moderated_at", where: "(moderated_at IS NOT NULL)"
     t.index ["publication_id", "path"], name: "index_documents_on_publication_id_and_path", unique: true
     t.index ["publication_id"], name: "index_documents_on_publication_id"
     t.index ["rss_guid"], name: "index_documents_on_rss_guid", unique: true

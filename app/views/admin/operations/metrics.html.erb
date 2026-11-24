@@ -1,0 +1,53 @@
+<div class="card">
+  <div class="row">
+    <h2>Operator Metrics &amp; Moderation</h2>
+    <a class="btn secondary" href="<%= admin_metrics_path(format: :json) %>">JSON Snapshot</a>
+  </div>
+  <p class="muted">Generated at <%= @metrics[:generated_at] %> &middot; PostgreSQL size: <%= (@metrics[:database][:size_bytes] / 1024.0 / 1024.0).round(2) %> MB</p>
+
+  <ul class="list">
+    <li><strong>Users:</strong> <%= @metrics[:users][:active] %> active / <%= @metrics[:users][:disabled] %> disabled &middot; OAuth apps: <%= @metrics[:oauth][:applications] %>, active tokens: <%= @metrics[:oauth][:active_tokens] %></li>
+    <li><strong>Feeds &amp; Reader:</strong> <%= @metrics[:feeds][:total] %> feeds (<%= @metrics[:feeds][:failing] %> failing), <%= @metrics[:feeds][:active_subscriptions] %> subscriptions, <%= @metrics[:feeds][:items_total] %> stored items (<%= @metrics[:feeds][:items_24h] %> last 24h)</li>
+    <li><strong>Publishing:</strong> <%= @metrics[:publishing][:documents_public] %> public / <%= @metrics[:publishing][:documents_draft] %> draft / <%= @metrics[:publishing][:documents_moderated] %> moderated (<%= (@metrics[:publishing][:total_storage_bytes] / 1024.0).round(1) %> KB stored)</li>
+    <li><strong>Upstream Push:</strong> <%= @metrics[:upstream_push][:websub_active] %> WebSub / <%= @metrics[:upstream_push][:rsscloud_active] %> rssCloud active &middot; staged pending: <%= @metrics[:upstream_push][:staged_pending] %></li>
+    <li><strong>Downstream Push:</strong> <%= @metrics[:downstream_push][:websub_active] %> WebSub / <%= @metrics[:downstream_push][:rsscloud_active] %> rssCloud active &middot; 24h success: <%= @metrics[:downstream_push][:delivery_success_rate_24h] %>% (<%= @metrics[:downstream_push][:attempts_24h_delivered] %>/<%= @metrics[:downstream_push][:attempts_24h_total] %>) &middot; due retries: <%= @metrics[:downstream_push][:retries_due] %></li>
+    <li><strong>Outbox &amp; Sidekiq:</strong> undispatched events: <%= @metrics[:outbox][:undispatched_count] %> (oldest age: <%= @metrics[:outbox][:oldest_undispatched_age_seconds] %>s) &middot; Sidekiq: <%= @metrics[:sidekiq][:status] %></li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Moderation Actions</h3>
+  <%= form_with url: admin_disable_user_path, method: :post, local: true do %>
+    <p><strong>Disable Account</strong> (revokes sessions, OAuth tokens, and suspends downstream push)</p>
+    <div class="row">
+      <input type="text" name="namespace" placeholder="namespace" required>
+      <input type="text" name="reason" placeholder="Reason (logged to audit trail)" required>
+      <button type="submit" class="danger">Disable User</button>
+    </div>
+  <% end %>
+
+  <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #ddd;">
+
+  <%= form_with url: admin_takedown_document_path, method: :post, local: true do %>
+    <p><strong>Takedown Public Document</strong> (returns HTTP 451 &amp; removes from RSS/Atom feeds)</p>
+    <div class="row">
+      <input type="text" name="namespace" placeholder="namespace" required>
+      <input type="text" name="path" placeholder="path (e.g. notes/post)" required>
+      <input type="text" name="reason" placeholder="Reason" required>
+      <button type="submit" class="danger">Takedown Document</button>
+    </div>
+  <% end %>
+</div>
+
+<div class="card">
+  <h3>Recent Audit Events</h3>
+  <ul class="list">
+    <% @recent_audits.each do |log| %>
+      <li>
+        <code><%= log.created_at.utc.iso8601 %></code>
+        <strong><%= log.action %></strong>
+        <span class="muted">(<%= log.actor_type %> &middot; <%= log.resource_type %> <%= log.resource_id %>)</span>
+      </li>
+    <% end %>
+  </ul>
+</div>

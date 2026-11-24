@@ -189,6 +189,7 @@ module RssCloud
         topic_url: resolved.canonical_topic_url,
         callback_url: callback_url
       )
+      Security::Quotas.check_downstream_subscriber_quota!(resolved.publication) if sub.new_record?
       sub.assign_attributes(
         publication: resolved.publication,
         topic_format: "rss",
@@ -205,6 +206,8 @@ module RssCloud
       )
       sub.save!
       [ sub, nil ]
+    rescue Security::Quotas::QuotaExceededError => e
+      [ nil, e.message ]
     rescue Security::SafeHttpFetch::Error => e
       [ nil, "Callback blocked or unreachable: #{e.message}" ]
     end

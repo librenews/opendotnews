@@ -39,6 +39,10 @@ class User < ApplicationRecord
     disabled_at.nil?
   end
 
+  def operator?
+    active? && (admin? || OpenNews.config.operator_emails.include?(email.to_s.downcase))
+  end
+
   def disable!
     transaction do
       update!(disabled_at: Time.current)

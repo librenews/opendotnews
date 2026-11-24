@@ -7,11 +7,15 @@ class Document < ApplicationRecord
   validates :visibility, inclusion: { in: %w[draft public] }
 
   scope :live, -> { where(deleted_at: nil) }
-  scope :publicly_visible, -> { live.where(visibility: "public") }
+  scope :publicly_visible, -> { live.where(visibility: "public", moderated_at: nil) }
   scope :drafts, -> { live.where(visibility: "draft") }
 
   def public?
-    deleted_at.nil? && visibility == "public"
+    deleted_at.nil? && moderated_at.nil? && visibility == "public"
+  end
+
+  def moderated?
+    moderated_at.present?
   end
 
   def draft?

@@ -1,7 +1,8 @@
 Rails.application.routes.draw do
-  # Health probes
+  # Health probes & security metadata
   get "/health/live", to: "health#live"
   get "/health/ready", to: "health#ready"
+  get "/.well-known/security.txt", to: "well_known#security_txt"
 
   # OAuth 2.1 Discovery (RFC 9728, RFC 8414) & Dynamic Client Registration (RFC 7591)
   get "/.well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
@@ -51,6 +52,12 @@ Rails.application.routes.draw do
 
   get "/settings/connections", to: "oauth_connections#index", as: :oauth_connections
   delete "/settings/connections/:id", to: "oauth_connections#destroy", as: :revoke_oauth_connection
+  delete "/settings/account", to: "account#destroy", as: :erase_account
+
+  # Operator metrics & moderation (Phase 5)
+  get "/admin/metrics", to: "admin/operations#metrics", as: :admin_metrics
+  post "/admin/moderation/disable_user", to: "admin/operations#disable_user", as: :admin_disable_user
+  post "/admin/moderation/takedown_document", to: "admin/operations#takedown_document", as: :admin_takedown_document
 
   # Public hosted publication, feeds, and Markdown/HTML documents (must remain last)
   namespace_constraint = /[a-zA-Z0-9][a-zA-Z0-9_-]{1,30}[a-zA-Z0-9]/

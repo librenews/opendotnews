@@ -40,6 +40,7 @@ class PublicDocumentsController < ApplicationController
 
     @document = Document.find_by(publication_id: @publication.id, path: norm_path)
     return head :not_found unless @document
+    return head :unavailable_for_legal_reasons if @document.moderated?
     return head :gone if @document.deleted?
     return head :not_found unless @document.public?
 

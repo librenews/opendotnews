@@ -8,6 +8,7 @@ module Publishing
     class PathConflictError < Error; end
     class NotFoundError < Error; end
     class IdempotencyConflictError < Error; end
+    class QuotaExceededError < Error; end
 
     class RevisionConflictError < Error
       attr_reader :current_revision
@@ -58,6 +59,12 @@ module Publishing
       if idempotency_key.present?
         replay = check_idempotency("publish_document", idempotency_key, req_hash)
         return replay if replay
+      end
+
+      begin
+        Security::Quotas.check_document_create_quota!(@user, new_bytes: md.bytesize)
+      rescue Security::Quotas::QuotaExceededError => e
+        raise QuotaExceededError, e.message
       end
 
       parsed = Publishing::Render.extract_frontmatter(md)
@@ -142,6 +149,7 @@ module Publishing
       ActiveRecord::Base.transaction do
         doc = Document.live.lock.find_by(publication_id: @publication.id, path: norm_path)
         raise NotFoundError, "Document '#{norm_path}' not found" unless doc
+        raise InvalidInputError, "Document '#{norm_path}' has been removed by moderation" if doc.moderated?
 
         if expected_revision.present? && expected_revision.to_i != doc.current_revision_number
           raise RevisionConflictError.new(
@@ -162,6 +170,14 @@ module Publishing
           parsed.frontmatter["title"].presence || doc.title
         else
           doc.title
+        end
+
+        if content_changed
+          begin
+            Security::Quotas.check_document_update_quota!(@user, new_bytes: md.bytesize)
+          rescue Security::Quotas::QuotaExceededError => e
+            raise QuotaExceededError, e.message
+          end
         end
 
         next_rev_num = content_changed ? doc.current_revision_number + 1 : doc.current_revision_number

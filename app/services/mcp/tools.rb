@@ -512,6 +512,8 @@ module Mcp
         raise ToolError.new("path_conflict", e.message)
       rescue Publishing::CreateOrRevise::PayloadTooLargeError => e
         raise ToolError.new("payload_too_large", e.message)
+      rescue Publishing::CreateOrRevise::QuotaExceededError => e
+        raise ToolError.new("quota_exceeded", e.message)
       rescue Publishing::CreateOrRevise::IdempotencyConflictError => e
         raise ToolError.new("idempotency_conflict", e.message)
       rescue Publishing::CreateOrRevise::InvalidInputError => e
@@ -595,6 +597,8 @@ module Mcp
         raise ToolError.new("revision_conflict", e.message, details: { current_revision: e.current_revision })
       rescue Publishing::CreateOrRevise::PayloadTooLargeError => e
         raise ToolError.new("payload_too_large", e.message)
+      rescue Publishing::CreateOrRevise::QuotaExceededError => e
+        raise ToolError.new("quota_exceeded", e.message)
       rescue Publishing::CreateOrRevise::IdempotencyConflictError => e
         raise ToolError.new("idempotency_conflict", e.message)
       rescue Publishing::CreateOrRevise::InvalidInputError => e
